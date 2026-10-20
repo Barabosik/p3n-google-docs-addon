@@ -13,7 +13,7 @@ An Apps Script **Editor add-on**: `src/` is what goes to Google, plain Apps Scri
 | `src/render.html` | Results and their motion: score count-up, highlighter sweep, rewrite wipe, check marks, error copy. |
 | `src/api.html` | The API client, the [browser extension's](https://github.com/Barabosik/p3n-chrome-extension) `lib/api.js` as a plain script: `POST /v1/detect` and `/v1/humanize`, polling `/v1/runs/{id}`, readable errors. |
 | `src/mock.html` | Canned API answers for mock mode and the tests. |
-| `src/styles.html` | p3n colours and motion, fitted to Docs' 300px sidebar. |
+| `src/styles.html` | Additions to Google's CSS package for Editor add-ons (linked in `Sidebar.html`): p3n's logo, wordmark, score colours and motion, in Docs' 300px sidebar. |
 | `src/appsscript.json` | Manifest: V8 and the two scopes. |
 | `dev/` | The local harness, the tests, the icons. |
 
@@ -92,4 +92,4 @@ Not yet checked in Docs: soft line breaks, table cells, pictures and a second do
 
 ## Publishing
 
-The Marketplace copy is in [store/listing.md](store/listing.md) and the steps in [store/marketplace-steps.md](store/marketplace-steps.md). The homepage, privacy policy and terms that Google's consent screen and listing link to are in `docs/`, served by GitHub Pages. `docs/privacy.html` and `PRIVACY.md` say the same thing: change both. `python dev/banner.py` makes the listing's card banner.
+The Marketplace copy is in [store/listing.md](store/listing.md) and the steps in [store/marketplace-steps.md](store/marketplace-steps.md). The homepage, privacy policy and terms that Google's consent screen and listing link to are in `docs/`, served by GitHub Pages. `docs/privacy.html` and `PRIVACY.md` say the same thing: change both. `python dev/banner.py` makes the listing's card banner, and `python dev/store-shots.py shot1.png shot2.png` fits Docs screenshots onto the listing's 1280×800. `node dev/standalone.mjs` creates and pushes the standalone project the listing points to.

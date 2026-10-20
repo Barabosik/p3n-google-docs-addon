@@ -86,7 +86,7 @@ window.P3N_RENDER = (() => {
   function done(button, label, { ok = false } = {}) {
     button.replaceChildren(checkMark(), label);
     if (ok) {
-      button.className = 'btn ok';
+      button.className = 'btn green';
       button.disabled = true;
     }
   }
@@ -131,7 +131,7 @@ window.P3N_RENDER = (() => {
     // The rewrite ends with a line break; it's shown without, and the host's Replace never adds a paragraph for it.
     const rewrite = o.text.trim();
     const status = h('p', { class: 'small', hidden: true });
-    const copyBtn = h('button', { type: 'button', class: opts.replace ? 'btn ghost' : 'btn accent' }, 'Copy');
+    const copyBtn = h('button', { type: 'button', class: 'btn' }, 'Copy');
     const box = h('div', { class: 'rewrite' }, rewrite);
     copyBtn.addEventListener('click', async () => {
       clearTimeout(copyBtn.reset);
@@ -150,7 +150,8 @@ window.P3N_RENDER = (() => {
     });
     const buttons = [];
     if (opts.replace) {
-      const rep = h('button', { type: 'button', class: 'btn accent' }, opts.replace.label);
+      // The view's one blue button while it can be clicked (app.html's refreshPrimary).
+      const rep = h('button', { type: 'button', class: 'btn', 'data-primary': '' }, opts.replace.label);
       rep.addEventListener('click', () => opts.replace.run(rewrite, rep, status));
       buttons.push(rep);
     }
@@ -193,8 +194,8 @@ window.P3N_RENDER = (() => {
   // An API error as the user should read it, with the way out. links: { signup, billing }; onKey opens the key screen.
   function error(e, { links, onKey }) {
     const kids = [];
-    const keyBtn = (label) => h('button', { type: 'button', class: 'btn ghost', onclick: onKey }, label);
-    const linkBtn = (label, href) => h('a', { class: 'btn accent', href, target: '_blank', rel: 'noopener' }, label);
+    const keyBtn = (label) => h('button', { type: 'button', class: 'btn', onclick: onKey }, label);
+    const linkBtn = (label, href) => h('a', { class: 'button btn', 'data-primary': '', href, target: '_blank', rel: 'noopener' }, label);
     switch (e.type) {
       case 'free_limit': {
         const mins = e.retryAfter ? Math.max(1, Math.ceil(e.retryAfter / 60)) : null;

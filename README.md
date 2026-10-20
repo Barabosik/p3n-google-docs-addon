@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/docs-check.png" width="300" alt="Check for AI in the p3n sidebar">
-  <img src="docs/docs-rewrite.png" width="300" alt="A rewrite in the p3n sidebar">
+  <img src="docs/sidebar-check.png" width="300" alt="Check for AI in the p3n sidebar">
+  <img src="docs/sidebar-rewrite.png" width="300" alt="A rewrite in the p3n sidebar, with Replace selection">
 </p>
 
 ## What it does

@@ -23,16 +23,16 @@ Checked against Google's docs in October 2026; the links are at the end.
 
 ### Review risks
 
-Google's [app review checklist](https://developers.google.com/workspace/marketplace/about-app-review) for Editor add-ons includes these lines, quoted. The sidebar doesn't meet all of them yet:
+Google's [app review checklist](https://developers.google.com/workspace/marketplace/about-app-review) for Editor add-ons includes these lines, quoted, and this is how p3n answers them:
 
-| Checklist item | p3n today |
+| Checklist item | p3n |
 | --- | --- |
-| "follows the UI style guide for editor add-ons and uses the CSS package for editor add-ons" | p3n's own styles, not Google's add-on CSS package. |
-| "only uses one blue primary action per display" | Two strong buttons, the orange Check for AI and the black Rewrite, and no blue one. |
-| "requires confirmation or displays warnings for all sensitive actions" (it adds that "you can avoid this requirement through design changes") | Replace selection writes at once. The button names the action, and one Ctrl+Z undoes it, but there's no confirmation step. |
+| "follows the UI style guide for editor add-ons and uses the CSS package for editor add-ons" | The sidebar loads Google's `add-ons1.css` first. p3n adds only its logo, wordmark, score colours and motion. |
+| "only uses one blue primary action per display" | Exactly one blue button per view: Check for AI before a result, Replace selection after a rewrite (Sign up or Top up on those errors). The e2e tests check it. |
+| "requires confirmation or displays warnings for all sensitive actions" (it adds that "you can avoid this requirement through design changes") | No confirm dialog, by design. The click on a button that says Replace selection is the consent, one Ctrl+Z undoes it, and the sidebar says so right after. This is explained in the reviewer notes. |
 | "Content width doesn't extend beyond 300p", one dialog at a time, buttons disabled while loading, links open in new windows, menu from `onInstall`/`onOpen`, V8 runtime | Met. |
 
-Changing the first three is a product decision for the lead. Reviewers may let a custom design through, or may not.
+The third row is the one a reviewer could still question. If they do, the answer is in the reviewer notes; a confirm step is the fallback.
 
 ### Domain risk
 
@@ -77,15 +77,9 @@ A published add-on needs its own standard Cloud project. The default project App
 
 An Editor add-on is published from a standalone Apps Script project, not one bound to a document.
 
-1. [us] Move the test checkout's `.clasp.json` aside, for example to `.clasp.test.json`; git ignores both.
-2. [user] `npx clasp logout`, then `npx clasp login`, and pick the publishing account. The Apps Script API must be on for it: https://script.google.com/home/usersettings.
-3. [us] Create and push the project:
-   ```bash
-   npx clasp create --type standalone --title "p3n" --rootDir src
-   git checkout src/appsscript.json   # clasp swaps in its default manifest
-   npx clasp push --force
-   ```
-4. [user] Open the project (`npx clasp open-script`) and go to **Project Settings → Google Cloud Platform (GCP) Project → Change project**. Enter the project number from step 3 → **Set project**. This can't be undone.
+1. [user] If clasp is logged in to another account: `npx clasp logout`, then `npx clasp login`, and pick the publishing account. The Apps Script API must be on for it: https://script.google.com/home/usersettings.
+2. [us or user] `node dev/standalone.mjs`. It keeps a bound test project's `.clasp.json` as `.clasp.test.json`, creates the standalone project "p3n", restores the manifest that clasp overwrites, pushes `src/`, and prints the project's URL.
+3. [user] Open the project (the printed URL) and go to **Project Settings → Google Cloud Platform (GCP) Project → Change project**. Enter the project number from step 3 → **Set project**. This can't be undone.
 
 ## 6. Test deployment: [us], in a window signed in to the publishing account only
 
@@ -99,7 +93,7 @@ An Editor add-on is published from a standalone Apps Script project, not one bou
    - the consent screen shows **p3n**;
    - Check, Rewrite, Replace and Undo work;
    - the four edge cases still open in CONTRIBUTING.md (soft line break, table cell, picture, second tab).
-3. Take the 1280×800 store screenshots from this run, and record the demo video (listing.md).
+3. Take screenshots of the Docs window during this run (`python dev/store-shots.py` fits them onto 1280×800), and record the demo video (listing.md).
 
 ## 7. Versioned deployment: [us] or [user]
 

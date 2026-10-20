@@ -4,6 +4,8 @@
   <base target="_blank">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Google's CSS package for Editor add-ons, then p3n's additions. -->
+  <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
   <?!= include_('styles'); ?>
 </head>
 <body>
@@ -24,8 +26,8 @@
       </div>
       <textarea id="text" rows="6" spellcheck="false" placeholder="Select text in your document, then click Check or Rewrite. Or paste text here."></textarea>
       <div class="row actions">
-        <button type="button" id="check" class="btn accent">Check for AI</button>
-        <button type="button" id="rewrite" class="btn ink">Rewrite</button>
+        <button type="button" id="check" class="btn action">Check for AI</button>
+        <button type="button" id="rewrite" class="btn">Rewrite</button>
       </div>
       <p id="hint" class="small muted" role="status" hidden></p>
     </section>
@@ -51,7 +53,7 @@
     <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="p3n_…" aria-describedby="key-status">
     <div class="row">
       <span class="small muted">Saved as soon as p3n accepts it.</span>
-      <button type="button" id="remove" class="btn ghost push">Remove key</button>
+      <button type="button" id="remove" class="btn push">Remove key</button>
     </div>
     <p id="key-status" class="note small" hidden></p>
 

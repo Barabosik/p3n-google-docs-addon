@@ -60,6 +60,8 @@ const shot = async (page, name) => {
 const click = (frame, sel) => frame.$eval(sel, (b) => b.click());
 const buttonByText = (frame, text) => frame.evaluateHandle((t) => [...document.querySelectorAll('button, a')].find((b) => b.textContent.trim() === t), text);
 const docText = (page, sel) => page.$eval(sel, (n) => n.textContent);
+// The visible blue ("action") buttons: Google's review allows one per view.
+const blue = (frame) => frame.$$eval('.action', (b) => b.filter((x) => x.offsetParent).map((x) => x.textContent.trim()).join(' | '));
 // The key screen slides in with a view transition: wait until it shows and its field has focus, or typing
 // lands in the hidden field (slow CI runners hit this).
 const openKeyScreen = async (frame) => {
@@ -71,6 +73,7 @@ try {
   // ---- Check, Rewrite, Replace on one paragraph ----
   {
     const { page, frame } = await open('?mock=1');
+    ok('one blue action: Check for AI before a result', (await blue(frame)) === 'Check for AI', await blue(frame));
     await select(page, '#p1');
     await click(frame, '#check');
     await frame.waitForFunction(settled, { timeout: 10000 });
@@ -85,6 +88,7 @@ try {
     await frame.waitForFunction(settled, { timeout: 10000 });
     const rewrite = await frame.$eval('.rewrite', (n) => n.textContent);
     ok('rewrite: shown without the API\'s trailing line break', rewrite === rewrite.trim() && rewrite.length > 0);
+    ok('one blue action: Replace selection after a rewrite', (await blue(frame)) === 'Replace selection', await blue(frame));
     await new Promise((r) => setTimeout(r, 900));
     await shot(page, 'rewrite');
 
@@ -95,6 +99,7 @@ try {
     ok('replace: no paragraph added or lost', (await page.$$eval('#doc h2, #doc p, #doc li', (n) => n.length)) === blocksBefore);
     ok('replace: the new text is selected', (await page.evaluate(() => getSelection().toString())) === rewrite);
     ok('replace: undo hint shown', /Ctrl\+Z|Cmd\+Z/.test(await frame.$eval('.note.ok', (n) => n.textContent)));
+    ok('one blue action: back to Check for AI once replaced', (await blue(frame)) === 'Check for AI', await blue(frame));
     await new Promise((r) => setTimeout(r, 500));
     await shot(page, 'replaced');
 
@@ -193,6 +198,7 @@ try {
     await frame.waitForFunction(() => document.querySelector('.note.error'), { timeout: 10000 });
     const t = await frame.$eval('.note.error', (n) => n.textContent);
     ok('free limit: explains and offers sign-up and a key', /used up/.test(t) && /Sign up/.test(t) && /Add an API key/.test(t));
+    ok('one blue action: Sign up on the free-limit error', (await blue(frame)) === 'Sign up', await blue(frame));
     await new Promise((r) => setTimeout(r, 500));
     await shot(page, 'free-limit');
     await page.close();

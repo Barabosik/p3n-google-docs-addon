@@ -48,6 +48,15 @@
     els.hint.hidden = !msg;
   }
 
+  // Google's review asks for one blue primary action per view: the result's own when it offers one that can still
+  // be clicked (Replace selection, Sign up, Top up, marked data-primary in render.html), Check for AI otherwise.
+  function refreshPrimary() {
+    const pick = [...els.result.querySelectorAll('[data-primary]')].find((b) => !b.disabled) ?? els.check;
+    for (const b of document.querySelectorAll('.action')) if (b !== pick) b.classList.remove('action');
+    pick.classList.add('action');
+  }
+  new MutationObserver(refreshPrimary).observe(els.result, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+
   // Reads the selection into the box. Only reads the document; nothing is sent to p3n. `quiet`: no hint when
   // nothing is selected; `background`: the controls stay as they are while it reads (the read on opening).
   async function grab({ quiet = false, background = false } = {}) {

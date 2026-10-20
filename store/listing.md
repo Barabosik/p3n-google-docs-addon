@@ -16,7 +16,7 @@ Google's rules that shape this copy:
 | Application icon 128×128 | `dev/icons/128.png` |
 | Application icon 32×32 | `dev/icons/32.png` |
 | Card banner 220×140 | `store/card-banner-220x140.png` (`python dev/banner.py`) |
-| Screenshots | 1 to 10 at 1280×800, from a live run in Google Docs. **Not made yet:** the captures in `docs/` are mock-mode sidebar crops. |
+| Screenshots | 1 to 10 at 1280×800, from a live run in Google Docs. **Not made yet:** the captures in `docs/` are the sidebar alone, with canned results. |
 | Terms of service | https://barabosik.github.io/p3n-google-docs-addon/terms.html |
 | Privacy policy | https://barabosik.github.io/p3n-google-docs-addon/privacy.html |
 | Support | https://github.com/Barabosik/p3n-google-docs-addon/issues |
@@ -98,6 +98,8 @@ YouTube, **Unlisted**, English UI, about 2 minutes, recorded with the standalone
 
 ```
 No account is needed to test. Open any document, select a paragraph, then Extensions → p3n → Check selection for AI (or Rewrite selection). The sidebar opens with the result. After a rewrite, "Replace selection" writes it in place of the selected text, and Ctrl+Z in the document undoes it.
+
+Replace selection has no confirm dialog, by design. Nothing in the document changes until the user clicks a button that says exactly what it does, Replace selection, which is the sidebar's one blue action at that point; that click is the consent. The rewrite is shown in full above the button before the click. Afterwards the sidebar says "Replaced in the document and selected there. Ctrl+Z in the document undoes it.", and one Ctrl+Z restores the original text and formatting. The add-on never writes to the document in any other way. It refuses to write over tables, pictures, equations, footnotes or smart chips, and refuses if the selection changed since the rewrite.
 
 Calls without an API key are free: 10 an hour per IP address, up to 5,000 characters each. If several reviewers share one IP and hit the limit, the sidebar says so. [Optional: a test API key with a small balance goes here. Paste it in the sidebar via "Add API key".]
 
