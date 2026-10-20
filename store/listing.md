@@ -16,13 +16,13 @@ Google's rules that shape this copy:
 | Application icon 128×128 | `dev/icons/128.png` |
 | Application icon 32×32 | `dev/icons/32.png` |
 | Card banner 220×140 | `store/card-banner-220x140.png` (`python dev/banner.py`) |
-| Screenshots | `store/screenshot-1.png` (Check) and `store/screenshot-2.png` (a rewrite with Replace selection), 1280×800. Both come from the live test deployment on 2026-10-20, with the account picture painted out. **Before submitting, recapture shot 2:** it predates the headline fix, so it shows "No longer reads as AI" over 0% → 2%. |
+| Screenshots | `store/screenshot-1.png` (Check) and `store/screenshot-2.png` (a rewrite with Replace selection), 1280×800. Both come from the live test deployment on 2026-10-20, with the account picture painted out. Shot 2 was recaptured after the headline fix. |
 | Terms of service | https://barabosik.github.io/p3n-google-docs-addon/terms.html |
 | Privacy policy | https://barabosik.github.io/p3n-google-docs-addon/privacy.html |
 | Support | https://github.com/Barabosik/p3n-google-docs-addon/issues |
 | Help (Editor add-ons) | https://barabosik.github.io/p3n-google-docs-addon/ |
 | Report issue (Editor add-ons) | https://github.com/Barabosik/p3n-google-docs-addon/issues |
-| Pricing | Free (the add-on). The p3n API has a free hourly allowance and paid keys. |
+| Pricing | Free of charge with paid features: the add-on is free, and more than 10 calls an hour takes a paid p3n API key. |
 
 Short description (146 characters):
 
@@ -56,14 +56,15 @@ Google Docs is a trademark of Google LLC.
 
 | Field | Value |
 | --- | --- |
-| App visibility | **Public**. It can't be changed after saving, and a personal (@gmail.com) account can only publish publicly anyway. |
+| App visibility | **Public** (decided 2026-10-20). It can't be changed after saving, and a personal (@gmail.com) account can only publish publicly anyway. |
 | Installation settings | Individual + Admin install |
 | App integration | Editor add-on → Docs add-on: the standalone script's **Script ID** (Apps Script → Project Settings → IDs) and the deployment's **version number** (Deploy → Manage deployments) |
 | OAuth scopes | `https://www.googleapis.com/auth/documents.currentonly`, `https://www.googleapis.com/auth/script.container.ui`. They must match `src/appsscript.json` and the consent screen's Data Access list exactly. |
 | Developer name | Nikita Andreiev |
 | Developer website | https://barabosik.github.io/p3n-google-docs-addon/ |
-| Developer email | The publishing account's choice. Google doesn't show it on the listing. |
-| Trader status | The user's choice. EU law (the Digital Services Act) requires this declaration for the EEA. |
+| Developer email | The publishing account's address (decided 2026-10-20; kept out of this repo). Google doesn't show it on the listing. |
+| Trader status | **Non-trader** (decided 2026-10-20, as on the Chrome Web Store). EU law (the Digital Services Act) requires this declaration for the EEA, and a non-trader gives no mailing address. |
+| Application website URL | https://barabosik.github.io/p3n-google-docs-addon/ (optional) |
 
 ## OAuth consent screen (Google Auth Platform)
 
@@ -103,7 +104,7 @@ No account is needed to test. Open any document, select a paragraph, then Extens
 
 Replace selection has no confirm dialog, by design. Nothing in the document changes until the user clicks a button that says exactly what it does, Replace selection, which is the sidebar's one blue action at that point; that click is the consent. The rewrite is shown in full above the button before the click. Afterwards the sidebar says "Replaced in the document and selected there. Ctrl+Z in the document undoes it.", and one Ctrl+Z restores the original text and formatting. The add-on never writes to the document in any other way. It refuses to write over tables (text inside a table cell included), pictures, equations, footnotes or smart chips, and refuses if the selection changed since the rewrite.
 
-Calls without an API key are free: 10 an hour per IP address, up to 5,000 characters each. If several reviewers share one IP and hit the limit, the sidebar says so. [Optional: a test API key with a small balance goes here. Paste it in the sidebar via "Add API key".]
+Calls without an API key are free: 10 an hour per IP address, up to 5,000 characters each. If several reviewers share one IP and hit the limit, the sidebar says so.
 
 The add-on calls only https://api.p3n.si, from the sidebar in the user's browser, and only when the user clicks. It reads only the selection in the open document (documents.currentonly).
 
