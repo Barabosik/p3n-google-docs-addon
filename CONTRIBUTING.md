@@ -25,7 +25,7 @@ Apps Script pages have no modules or separately served files, so each browser pa
 ```bash
 npm install
 npm test            # Code.js against a stand-in for DocumentApp (15 tests)
-npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (32 checks)
+npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (34 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
 ```
@@ -78,7 +78,7 @@ After a change: `npm run push:dev`, then reopen the sidebar.
 - Each selected paragraph goes to the API as a separate paragraph and comes back as one, so headings, list items and spacing stay. Paragraphs the rewrite left alone aren't touched.
 - New words take the formatting most of the old words had. A bold phrase inside a rewritten paragraph comes back plain. A link stays only if the whole selection was that link.
 - The API's trailing line break never becomes an empty paragraph.
-- It won't write over tables, pictures, drawings, equations, footnotes or smart chips. Check and Copy still work there.
+- It won't write over tables (text inside a table cell included), pictures, drawings, equations, footnotes or smart chips. Check and Copy still work there.
 - It all happens in one server call, so one Ctrl+Z takes it back, formatting included.
 
 ## Checked in Google Docs
@@ -90,9 +90,13 @@ Checked by hand in a real document, in mock mode:
 - Check, Rewrite and Copy.
 - Reading the selection, Replace on one paragraph and on six (heading, bold, bullets), and one-step undo.
 - Saving the key.
+- A soft line break (Shift+Enter): Replace keeps it inside the one paragraph, and Ctrl+Z restores it.
+- Text in a table cell: no Replace ("The selection has a table in it"), even with only the cell's text selected, because Docs hands over the cell, not just its text. Check and Copy work, and the document stays as it was.
+- A line with a picture in it: no Replace, the picture note, and Copy.
+- A second document tab: Replace changes only that tab's text, and Ctrl+Z restores it.
 
-Not yet checked in Docs: soft line breaks, table cells, pictures and a second document tab. Only the tests cover them.
+Then live, as the standalone project in a test deployment: the unverified-app screen, consent to both scopes, and Check, Rewrite, Replace selection and Ctrl+Z on the real API.
 
 ## Publishing
 
-The Marketplace copy is in [store/listing.md](store/listing.md) and the steps in [store/marketplace-steps.md](store/marketplace-steps.md). The homepage, privacy policy and terms that Google's consent screen and listing link to are in `docs/`, served by GitHub Pages. `docs/privacy.html` and `PRIVACY.md` say the same thing: change both. `python dev/banner.py` makes the listing's card banner, and `python dev/store-shots.py shot1.png shot2.png` fits Docs screenshots onto the listing's 1280×800. `node dev/standalone.mjs` creates and pushes the standalone project the listing points to.
+The Marketplace copy is in [store/listing.md](store/listing.md) and the steps in [store/marketplace-steps.md](store/marketplace-steps.md). The homepage, privacy policy and terms that Google's consent screen and listing link to are in `docs/`, served by GitHub Pages. `docs/privacy.html` and `PRIVACY.md` say the same thing: change both. `python dev/banner.py` makes the listing's card banner, and `python dev/store-shots.py --crop 608,0,1952,1220 shot1.png shot2.png` fits Docs screenshots onto the listing's 1280×800 (the crop is for a maximized window on a 2560-pixel-wide screen). `node dev/standalone.mjs` creates and pushes the standalone project the listing points to.

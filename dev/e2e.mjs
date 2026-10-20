@@ -88,6 +88,7 @@ try {
     await frame.waitForFunction(settled, { timeout: 10000 });
     const rewrite = await frame.$eval('.rewrite', (n) => n.textContent);
     ok('rewrite: shown without the API\'s trailing line break', rewrite === rewrite.trim() && rewrite.length > 0);
+    ok('rewrite: "No longer reads as AI" when the text sent scored as AI', (await frame.$eval('.score .label', (n) => n.textContent)) === 'No longer reads as AI');
     ok('one blue action: Replace selection after a rewrite', (await blue(frame)) === 'Replace selection', await blue(frame));
     await new Promise((r) => setTimeout(r, 900));
     await shot(page, 'rewrite');
@@ -123,6 +124,17 @@ try {
     ok('multi: same number of paragraphs', after.length === before.length, `${before.length} → ${after.length}`);
     ok('multi: heading left as it was', after[0] === before[0]);
     ok('multi: both paragraphs rewritten', after[1] !== before[1] && after[2] !== before[2]);
+    await page.close();
+  }
+
+  // ---- a rewrite of text the detector model didn't score as AI: no "No longer" ----
+  {
+    const { page, frame } = await open('?mock=1');
+    await select(page, '#p2');
+    await click(frame, '#rewrite');
+    await frame.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent === 'Replace selection'), { timeout: 15000 });
+    const label = await frame.$eval('.score .label', (n) => n.textContent);
+    ok('rewrite: "Doesn\'t read as AI" when the text sent didn\'t score as AI', label === "Doesn't read as AI", label);
     await page.close();
   }
 

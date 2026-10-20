@@ -9,6 +9,11 @@ Who does each step:
 
 Checked against Google's docs in October 2026; the links are at the end.
 
+**Status, 2026-10-20:**
+- Steps 1–6 are done. The Search Console domain is verified, the Cloud project exists, the consent screen is In production, and the standalone project is linked and test-deployed. The demo video is recorded, and the screenshots are in `store/`.
+- Next: the YouTube upload, then steps 7–10.
+- Project numbers, IDs and the client ID stay out of this repo.
+
 ## 0. Before starting
 
 - **[user] Pick the publishing Google account.** One account should do all of the following:
@@ -36,7 +41,7 @@ The third row is the one a reviewer could still question. If they do, the answer
 
 ### Domain risk
 
-Google says any verified "top private domain" can be an authorized domain. `github.io` is a public suffix, so `barabosik.github.io` should qualify. But a [forum report from 13 October 2026](https://discuss.google.dev/t/google-oauth-domain-not-found-for-verified-github-pages-domain/404025) describes Branding answering "Domain not found" for exactly this setup: a `github.io` site verified in Search Console with the HTML file. Google's own docs don't settle it. If step 4 hits that error, the fallback is a custom domain the user owns, pointed at GitHub Pages and verified in Search Console as a Domain property through DNS. That costs a domain registration, so it's the user's call.
+Google says any verified "top private domain" can be an authorized domain. `github.io` is a public suffix, so `barabosik.github.io` should qualify. But a [forum report from 13 October 2026](https://discuss.google.dev/t/google-oauth-domain-not-found-for-verified-github-pages-domain/404025) describes Branding answering "Domain not found" for exactly this setup: a `github.io` site verified in Search Console with the HTML file. Google's own docs don't settle it. **Resolved 2026-10-20:** Google accepted `barabosik.github.io`, so no custom domain is needed. Had step 4 hit that error, the fallback was a custom domain the user owns, pointed at GitHub Pages and verified in Search Console as a Domain property through DNS. That costs a domain registration, so it's the user's call.
 
 ## 1. Repo and Pages: [lead]
 
@@ -52,12 +57,12 @@ Google says any verified "top private domain" can be an authorized domain. `gith
 1. [user] Go to https://search.google.com/search-console with the publishing account. **Add property → URL prefix → `https://barabosik.github.io/` → Continue**.
 2. Pick **HTML file** and download `google<code>.html`.
 3. [user or lead] Commit that file, unchanged, to the root of `Barabosik/Barabosik.github.io` (GitHub's **Add file → Upload files** will do). Wait until `https://barabosik.github.io/google<code>.html` loads.
-4. [user] Click **Verify**. Keep the file in that repo for good: removing it unverifies the domain.
+4. [user] Click **Verify**. Keep the file in that repo for good: removing it unverifies the domain. (Done 2026-10-20. The file is in the repo's source and its built `main`.)
 
 ## 3. Google Cloud project: [user]
 
 1. Go to https://console.cloud.google.com with the publishing account and accept the Cloud terms if asked.
-2. **Select a project → New project**. Name it `p3n`, since Google shows the project name in authorization prompts. Create it.
+2. **Select a project → New project**. Name it `p3n docs add-on`. A Cloud project name needs at least 4 characters, so plain `p3n` won't do; the app name users see comes from the consent screen and stays `p3n`. Create it.
 3. Note the **Project number**: **⋮ (More) → Project settings**.
 
 A published add-on needs its own standard Cloud project. The default project Apps Script makes can't be published, and two published apps can't share a project.
@@ -70,7 +75,7 @@ A published add-on needs its own standard Cloud project. The default project App
    - Contact information: an email address.
    - Finish: tick the Google API Services User Data Policy box → **Create**.
 2. **Branding**: add the application home page, privacy policy and terms of service links. Under **Authorized domains**, add `barabosik.github.io`. Fill in the developer contact. Skip the logo unless the user wants it, since a logo means Google checks the branding first. **Save**.
-3. **Data Access → Add or remove scopes → Manually add scopes**: paste both scope URLs from listing.md → **Add to table → Update → Save**. Note whether the table marks them sensitive. Community reports say Google treats `script.container.ui` as sensitive.
+3. **Data Access → Add or remove scopes → Manually add scopes**: paste both scope URLs from listing.md → **Add to table → Update → Save**. The table marks `script.container.ui` as **sensitive** and `documents.currentonly` as non-sensitive, so step 9 needs the demo video.
 4. **Audience → Publish app → Confirm**. The status becomes In production.
 
 ## 5. Standalone script: [us], after [user] signs in to clasp
