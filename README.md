@@ -66,7 +66,7 @@ After a change, `npx clasp push --force` and reload the document.
 
 ## Several Google accounts in one browser
 
-A long-standing Apps Script bug, not one in p3n: with several Google accounts signed in to one browser, and the document belonging to an account other than the browser's default one (the first signed in, `/u/0/` in Google's URLs), the sidebar opens and draws, but every call from it back to Apps Script (`google.script.run`) fails with "We're sorry, a server error occurred while reading from storage. Error code PERMISSION_DENIED." ([developer forum thread](https://discuss.google.dev/t/how-is-everyone-handling-the-dreaded-authuser-0-multiple-accounts-bug-in-apps-script-add-ons/363446)). The live test below ran into it: the test account was the third account signed in.
+A long-standing Apps Script bug, not one in p3n: with several Google accounts signed in to one browser, and the document belonging to an account other than the browser's default one (the first signed in, `/u/0/` in Google's URLs), the sidebar opens and draws, but every call from it back to Apps Script (`google.script.run`) fails with "We're sorry, a server error occurred while reading from storage. Error code PERMISSION_DENIED." ([developer forum thread](https://discuss.google.dev/t/how-is-everyone-handling-the-dreaded-authuser-0-multiple-accounts-bug-in-apps-script-add-ons/363446)). The live test below ran into it with the test account as the third account signed in; in a Chrome profile signed in to that account only, the same steps all worked.
 
 - What fails: reading the selection (Use selection, the menu's Check and Rewrite on a selection), Replace, saving or removing the key.
 - What still works: text typed or pasted in the box, Check, Rewrite and Copy. They don't go through Apps Script; the sidebar calls p3n itself.
@@ -100,10 +100,10 @@ Nothing else: no Drive access, no other documents, no `script.external_request` 
 
 - It writes only if the selected text is still exactly what was rewritten. If the selection moved (you clicked in the document while waiting), it finds the text you sent and replaces it there, but only for a single paragraph that appears exactly once; otherwise it refuses and says why.
 - The API reads a blank line as a paragraph break, so each selected paragraph goes over as a paragraph of its own, and the rewrite comes back one paragraph per paragraph. Each goes back into its own paragraph, so headings, list items, alignment and spacing stay. Paragraphs the rewrite left as they were (short ones such as headings) aren't touched at all.
-- Inside a paragraph, the new words take the character formatting most of the old words had (bold, italic, font, size, colours). A link is kept only if the whole selection was that one link. The spaces at the edges of the selection stay.
+- Inside a paragraph, the new words take the character formatting most of the old words had (bold, italic, font, size, colours). The rewrite doesn't say which new words came from which old ones, so a bold phrase inside a rewritten paragraph comes back plain. A link is kept only if the whole selection was that one link. The spaces at the edges of the selection stay.
 - The rewrite ends with `"\n"`; that never becomes an empty paragraph. The new text goes in before the old is deleted, so no paragraph is left empty in between.
 - It won't write over a selection with a table, picture, drawing, equation, footnote or smart chip in it. Check and Copy still work there.
-- All edits happen in one server call. Ctrl+Z in the document undoes them; whether Docs takes them back in one step is part of the live test below.
+- All edits happen in one server call, and one Ctrl+Z in the document takes them all back, formatting included (checked in Docs, on one paragraph and on six).
 
 ## Files
 
@@ -137,9 +137,9 @@ npm run harness   # the harness on http://127.0.0.1:8787/?mock=1, to try the sid
 
 ### Live test in Google Docs
 
-Run on 2026-10-20: a bound test document ("p3n test", in the test account's Drive, shared with no one), mock mode on, in Chrome with several Google accounts signed in and the test account not the default one. No free API calls used.
+Run on 2026-10-20: a bound test document ("p3n test", in the test account's Drive, shared with no one), mock mode on, no free API calls used. Two rounds: first in a Chrome with several Google accounts signed in and the test account not the default one, then in a Chrome profile signed in to the test account only.
 
-Passed:
+Passed with several accounts signed in:
 
 - Install as above: `clasp create --type docs`, push, the menu under **Extensions → p3n test**. The consent screen asked for the two scopes in the wording above, behind the unverified-app warning, with a checkbox each.
 - The sidebar opens from the menu and draws as in the harness at Docs' 300px width, the score's count-up included.
@@ -148,16 +148,19 @@ Passed:
 - Copy: the rewrite reached the system clipboard and the button said Copied.
 - A failed call to Apps Script shows the sidebar's plain message (plus Google's own in mock mode) instead of breaking the sidebar.
 
-Not verified in Docs, because of the [several-accounts bug](#several-google-accounts-in-one-browser), which stops everything that goes through `google.script.run`. `npm test` and the harness e2e cover these against stand-ins, not against Docs:
+Everything that goes through `google.script.run` failed there with the [several-accounts bug](#several-google-accounts-in-one-browser). In the single-account profile it all worked:
 
-- Reading the selection: Use selection, and the menu's Check and Rewrite on a selection.
-- Replace keeps the paragraph's style and the words' formatting; no empty paragraph appears; the new text is selected.
-- Ctrl+Z in the document undoes the whole Replace in one step.
-- Several paragraphs including a heading and a list item; a selection with a soft line break; a selection in a table cell; a selection that includes a picture (refused).
-- A document with tabs: selection in the second tab.
-- The key saved in the sidebar survives closing and reopening it, and isn't visible from another account with access to the document.
+- The sidebar opens without the error, and **Use selection** reads the selected paragraph exactly (curly quotes included).
+- **Rewrite → Replace selection** on one paragraph: the paragraph holds the rewrite, still Normal text in Arial 11, the next paragraph follows with no empty one in between, and the new text is selected. One Ctrl+Z puts the original back.
+- **Six paragraphs**, from the Heading 2 through a bold phrase and both list items to a plain paragraph: one rewritten paragraph each, the heading untouched and still Heading 2, the list items still bullets, no paragraph added or lost. The bold phrase sat in a rewritten paragraph and came back plain, as designed (see [How Replace works](#how-replace-works)). One Ctrl+Z put all six back, bold included.
+- **Key:** saved through Apps Script (a made-up key, which mock mode accepts), back in the sidebar after closing and reopening it, then removed. Nothing left behind.
 
-To finish them: open the test document in a browser window signed in to the test account only, keep mock mode on, and go down that list.
+Not verified in Docs, covered only by `npm test` and the harness e2e:
+
+- A selection with a soft line break, in a table cell, or with a picture in it (refused).
+- A selection in a document's second tab.
+- That another account with access to the document can't see the key (user properties are per user by Google's design).
+- A live call from Docs. The probe above shows the sidebar reaches the API; the API client is the extension's `lib/api.js` unchanged, already run live there and in Word.
 
 ## What needs the owner
 
