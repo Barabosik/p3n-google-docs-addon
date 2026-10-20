@@ -2,10 +2,11 @@
 
 Select text in a Google Doc and see whether it reads as AI-written. Or rewrite it so it doesn't, and put the rewrite back in place of your selection, formatting kept. It uses the [p3n API](https://p3n.si/docs): the same Check and Rewrite skills as p3n.si, the browser extension and the Word add-in.
 
-![Check for AI](docs/harness-check.png)
-![Rewrite, then Replace selection](docs/harness-rewrite.png)
+![Check for AI, in Google Docs](docs/docs-check.png) ![Rewrite, in Google Docs](docs/docs-rewrite.png)
 
-*Captured in the local harness (`dev/harness.mjs`) with the mock API: the real sidebar next to a stand-in document, not Google Docs itself.*
+*In Google Docs, mock API (nothing sent to p3n). Text typed in the box gets Copy; text taken from the document also gets Replace selection, shown here in the local harness (`dev/harness.mjs`): the real sidebar next to a stand-in document.*
+
+![Rewrite, then Replace selection](docs/harness-rewrite.png)
 
 Version 0.1.0. Not on the Google Workspace Marketplace yet; install it as a test deployment (below).
 
@@ -13,7 +14,7 @@ Version 0.1.0. Not on the Google Workspace Marketplace yet; install it as a test
 
 - Select text in the document, then **Extensions → p3n → Check selection for AI** or **Rewrite selection**. The sidebar opens and runs it.
 - Or **Extensions → p3n → Open p3n** and use the buttons. With the sidebar open, select other text and click **Check for AI** or **Rewrite** again: they always take the current selection while the box shows text from the document. Text you type or paste in the box is used as it is.
-- After a rewrite, **Replace selection** puts it in place of the selected text and selects it. Ctrl+Z (Cmd+Z on a Mac) in the document undoes it. **Copy** is there too.
+- After a rewrite, **Replace selection** puts it in place of the selected text and selects it. Ctrl+Z (Cmd+Z on a Mac) in the document undoes it. **Copy** is there too; where the browser doesn't give the sidebar the clipboard, it selects the rewrite and says to press Ctrl+C.
 - Docs' own right-click menu can't be extended by add-ons (and the browser extension's menu doesn't show in Docs either), so the entry points are the Extensions menu and the sidebar.
 
 ## Editor add-on, not a Workspace add-on
@@ -52,7 +53,7 @@ You need Node 18+ and a Google account to test with.
    npx clasp push --force
    ```
    This writes `.clasp.json` with the script and document IDs (ignored by git; `.clasp.json.example` shows its shape). The Doc is in your Drive, named "p3n test", shared with no one.
-5. Open the Doc and reload it. The menu is under **Extensions → p3n test** (a bound script's menu takes the project's name; a published add-on's takes the add-on's).
+5. Open the Doc and reload it, in a browser window signed in to the test account only, or with it as the default account (see [Several Google accounts](#several-google-accounts-in-one-browser)). The menu is under **Extensions → p3n test** (a bound script's menu takes the project's name; a published add-on's takes the add-on's).
 6. The first menu click shows "Authorization required", then a Google sign-in popup:
    - "Google hasn't verified this app": **Advanced → Go to p3n test (unsafe)**. It's your own script.
    - Google then lists the two scopes below as checkboxes. Tick both (**Select all**) and **Continue**. With one left out, the sidebar can't read the document and says so.
@@ -61,7 +62,16 @@ For the Marketplace the add-on has to be a standalone project instead: `npx clas
 
 After a change, `npx clasp push --force` and reload the document.
 
-**Mock mode:** in the Apps Script editor (Extensions → Apps Script in the Doc, or `npm run open`), pick `devMockOn` in the function list and click Run, then reopen the sidebar. It shows a *Mock API* badge and answers from canned runs in `src/mock.html`: nothing goes to p3n and no free calls are used. `devMockOff` turns it off. Both change only your own properties.
+**Mock mode:** in the Apps Script editor (Extensions → Apps Script in the Doc, or `npm run open`), pick `devMockOn` in the function list and click Run, then reopen the sidebar. It shows a *Mock API* badge and answers from canned runs in `src/mock.html`: nothing goes to p3n and no free calls are used. When a call to Apps Script fails, the sidebar's message also shows Google's own error. `devMockOff` turns it off. Both change only your own properties.
+
+## Several Google accounts in one browser
+
+A long-standing Apps Script bug, not one in p3n: with several Google accounts signed in to one browser, and the document belonging to an account other than the browser's default one (the first signed in, `/u/0/` in Google's URLs), the sidebar opens and draws, but every call from it back to Apps Script (`google.script.run`) fails with "We're sorry, a server error occurred while reading from storage. Error code PERMISSION_DENIED." ([developer forum thread](https://discuss.google.dev/t/how-is-everyone-handling-the-dreaded-authuser-0-multiple-accounts-bug-in-apps-script-add-ons/363446)). The live test below ran into it: the test account was the third account signed in.
+
+- What fails: reading the selection (Use selection, the menu's Check and Rewrite on a selection), Replace, saving or removing the key.
+- What still works: text typed or pasted in the box, Check, Rewrite and Copy. They don't go through Apps Script; the sidebar calls p3n itself.
+- The fix for users: open the document in a browser window or Chrome profile signed in to just the account that has it, or make that account the default (sign out of all accounts, sign in to that one first). The sidebar's error message says this when it hits the failure.
+- The add-on can't fix it: the failure is in Google's frame between the sidebar and the script, before any p3n code runs.
 
 ## Scopes
 
@@ -116,25 +126,38 @@ Motion is kept to the result, as in the other clients: the score counts to its v
 
 ```bash
 npm test          # Code.js against a stand-in for DocumentApp (13 tests)
-npm run e2e       # the sidebar in headless Chrome, on the local harness, mock API (27 checks)
+npm run e2e       # the sidebar in headless Chrome, on the local harness, mock API (28 checks)
 LIVE=1 npm run e2e  # adds one Check and one Rewrite on the live API, keyless: 2 of the 10 free calls an hour
 npm run harness   # the harness on http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 ```
 
 - `npm test` loads `src/Code.js` with a small in-memory DocumentApp (Text elements with per-character attributes, range elements with inclusive offsets) and checks: reading across paragraphs, soft line breaks, replacing a word range with the majority formatting, the edge spaces, whole paragraphs, several paragraphs with an untouched heading, links, the refusals (edited text, tables, pictures), the find-once fallback, a dropped paragraph, and the key format.
-- `npm run e2e` checks Check, Rewrite and Replace on one paragraph and on several, Check again after Replace, the edited-text refusal, a stale rewrite after other text was taken in, typed text (no Replace), nothing selected, the menu's Check-on-open, the free limit, the key screen (malformed, accepted, revoked, removed), reduced motion, and no page errors. Captures go to `dev/out/`. `CHROME=path/to/chrome` if Chrome isn't in the default Windows location.
+- `npm run e2e` checks Check, Rewrite and Replace on one paragraph and on several, Check again after Replace, the edited-text refusal, a stale rewrite after other text was taken in, typed text (no Replace, Copy confirms), nothing selected, the menu's Check-on-open, the free limit, the key screen (malformed, accepted, revoked, removed), reduced motion, and no page errors. Captures go to `dev/out/`. `CHROME=path/to/chrome` if Chrome isn't in the default Windows location.
 - The harness's document side mimics `Code.js` on a web page, so it tests the sidebar, not Docs. What only Docs can show is in the live test below.
 
 ### Live test in Google Docs
 
-Not run yet: it needs a Google sign-in for clasp and a test document. The checks, in a test document, in mock mode, so no free calls are used:
+Run on 2026-10-20: a bound test document ("p3n test", in the test account's Drive, shared with no one), mock mode on, in Chrome with several Google accounts signed in and the test account not the default one. No free API calls used.
 
-- The sidebar's `fetch` to `api.p3n.si` works from the add-on sandbox (the keyless choice above depends on it). Checked for free: paste a well-formed but unknown key on the key screen. `GET /v1/me` answers 401 "p3n doesn't accept this key" if the request got through, and "Can't reach p3n" if the sandbox blocked it. `/v1/me` doesn't count against the free hourly calls.
-- Check and Rewrite on a selection; Replace keeps the paragraph's style and the words' formatting; no empty paragraph appears; the new text is selected.
+Passed:
+
+- Install as above: `clasp create --type docs`, push, the menu under **Extensions → p3n test**. The consent screen asked for the two scopes in the wording above, behind the unverified-app warning, with a checkbox each.
+- The sidebar opens from the menu and draws as in the harness at Docs' 300px width, the score's count-up included.
+- `fetch` from the sidebar's sandbox reaches `api.p3n.si`, so the keyless design works from the add-on: a well-formed but unknown key on the key screen got the API's 401 "p3n doesn't accept this key" (the sandbox blocking it would read "Can't reach p3n"). `GET /v1/me` doesn't count against the free calls.
+- Check and Rewrite on typed text: the score, the flagged sentences, the rewrite, the "Detector model … AI class" numbers. No Replace offered for typed text.
+- Copy: the rewrite reached the system clipboard and the button said Copied.
+- A failed call to Apps Script shows the sidebar's plain message (plus Google's own in mock mode) instead of breaking the sidebar.
+
+Not verified in Docs, because of the [several-accounts bug](#several-google-accounts-in-one-browser), which stops everything that goes through `google.script.run`. `npm test` and the harness e2e cover these against stand-ins, not against Docs:
+
+- Reading the selection: Use selection, and the menu's Check and Rewrite on a selection.
+- Replace keeps the paragraph's style and the words' formatting; no empty paragraph appears; the new text is selected.
 - Ctrl+Z in the document undoes the whole Replace in one step.
 - Several paragraphs including a heading and a list item; a selection with a soft line break; a selection in a table cell; a selection that includes a picture (refused).
 - A document with tabs: selection in the second tab.
 - The key saved in the sidebar survives closing and reopening it, and isn't visible from another account with access to the document.
+
+To finish them: open the test document in a browser window signed in to the test account only, keep mock mode on, and go down that list.
 
 ## What needs the owner
 
