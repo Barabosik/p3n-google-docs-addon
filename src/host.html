@@ -11,7 +11,11 @@ window.P3N_HOST = (() => {
   function server(fn, ...args) {
     return new Promise((resolve, reject) => {
       if (!available) return reject(new Error('Open p3n from Extensions in Google Docs to use your document.'));
-      google.script.run.withSuccessHandler(resolve).withFailureHandler((e) => reject(new Error(trouble(e))))[fn](...args);
+      google.script.run.withSuccessHandler(resolve).withFailureHandler((e) => {
+        console.warn('[p3n]', fn, e);
+        // In mock mode (testing) the sidebar also shows Google's own message, to tell failures apart.
+        reject(new Error(trouble(e) + (BOOT.mock ? ` [${fn}: ${String(e?.message || e)}]` : '')));
+      })[fn](...args);
     });
   }
   function trouble(e) {
@@ -69,7 +73,8 @@ window.P3N_HOST = (() => {
     // Copy: the clipboard API, or the older way where the sidebar's frame isn't allowed it.
     async copy(text) {
       try {
-        await navigator.clipboard.writeText(text);
+        // In the Docs sandbox the clipboard API can reject or never settle; give it a moment, then fall back.
+        await Promise.race([navigator.clipboard.writeText(text), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 800))]);
         return true;
       } catch {
         const ta = document.createElement('textarea');

@@ -132,11 +132,21 @@ window.P3N_RENDER = (() => {
     const rewrite = o.text.trim();
     const status = h('p', { class: 'small', hidden: true });
     const copyBtn = h('button', { type: 'button', class: opts.replace ? 'btn ghost' : 'btn accent' }, 'Copy');
+    const box = h('div', { class: 'rewrite' }, rewrite);
     copyBtn.addEventListener('click', async () => {
-      if (!(await opts.copy(rewrite))) return;
-      done(copyBtn, 'Copied');
       clearTimeout(copyBtn.reset);
-      copyBtn.reset = setTimeout(() => copyBtn.replaceChildren('Copy'), 1500);
+      if (await opts.copy(rewrite)) {
+        done(copyBtn, 'Copied');
+        copyBtn.reset = setTimeout(() => copyBtn.replaceChildren('Copy'), 1500);
+        return;
+      }
+      // The frame isn't allowed the clipboard: select the rewrite so the keyboard can copy it.
+      const range = document.createRange();
+      range.selectNodeContents(box);
+      getSelection().removeAllRanges();
+      getSelection().addRange(range);
+      copyBtn.textContent = /Mac/i.test(navigator.platform || '') ? 'Press Cmd+C' : 'Press Ctrl+C';
+      copyBtn.reset = setTimeout(() => copyBtn.replaceChildren('Copy'), 4000);
     });
     const buttons = [];
     if (opts.replace) {
@@ -157,7 +167,7 @@ window.P3N_RENDER = (() => {
           o.ai_before != null ? h('span', { class: 'from' }, `${before}% → `) : null,
           scoreNum(pct(o.ai_after)), h('small', {}, 'AI class'))),
       meter(o.ai_after, t),
-      h('div', { class: 'rewrite' }, rewrite),
+      box,
       h('div', { class: 'row' }, buttons),
       status,
     ];

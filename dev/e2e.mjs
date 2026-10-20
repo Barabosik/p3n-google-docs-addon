@@ -151,6 +151,11 @@ try {
     await frame.waitForFunction(() => document.querySelector('.rewrite'), { timeout: 15000 });
     const labels = await frame.$$eval('#result button', (b) => b.map((x) => x.textContent));
     ok('typed: no Replace for text that isn\'t from the document', !labels.includes('Replace selection') && labels.includes('Copy'), labels.join(', '));
+    // Copy says what happened: Copied, or (no clipboard for the frame) the rewrite selected and a key to press.
+    const copyBtn = await buttonByText(frame, 'Copy');
+    await copyBtn.click();
+    const said = await frame.waitForFunction((b) => b.textContent !== 'Copy' && b.textContent, { timeout: 3000 }, copyBtn).then((h) => h.jsonValue(), () => 'Copy');
+    ok('typed: Copy confirms', /^(Copied|Press (Ctrl|Cmd)\+C)$/.test(said), said);
     await page.close();
   }
 

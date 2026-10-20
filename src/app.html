@@ -124,6 +124,7 @@
     const controller = new AbortController();
     state.controller = controller;
     els.result.replaceChildren();
+    if (!state.reading) hint('');
     setBusy(skill);
     refreshInput();
     try {
