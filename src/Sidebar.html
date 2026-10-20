@@ -63,8 +63,11 @@
   <footer id="quota" class="small muted"></footer>
 
   <script>window.P3N_BOOT = <?!= boot ?>;</script>
+  <!-- Host-free parts (api, mock, render) first, then the Docs adapter, then the controller that joins them. -->
   <?!= include_('api'); ?>
   <?!= include_('mock'); ?>
+  <?!= include_('render'); ?>
+  <?!= include_('host'); ?>
   <?!= include_('app'); ?>
 </body>
 </html>

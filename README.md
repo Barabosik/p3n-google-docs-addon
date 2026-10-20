@@ -94,9 +94,11 @@ Nothing else: no Drive access, no other documents, no `script.external_request` 
 | --- | --- |
 | `src/Code.js` | Apps Script: the menu, opening the sidebar, reading the selection, replacing it, saving or removing the key, mock mode on and off. |
 | `src/Sidebar.html` | The sidebar's markup. Pulls in the parts below as Apps Script template includes. |
-| `src/app.html` | The sidebar's logic, ported from the extension's `ui/panel.js` and the Word add-in's task pane: checks, rewrites, the result and its motion, Replace, the key screen. |
+| `src/host.html` | The Docs host adapter, the only sidebar code that knows it's in Docs: `getKey`/`setKey` (user properties via `Code.js`), the free count, `grabSelection()` → `{ text, editable, blocked }`, `replace(text)` → `{ ok, reason }`, `copy`, `openSettings` (none: the sidebar has its own key screen). The same shape as the extension's and the Word pane's adapters. |
+| `src/app.html` | The controller: the text box, running a skill, Replace, the key screen. Talks to the document only through the adapter and to p3n only through the API client. |
+| `src/render.html` | Results and their motion, host-free: score count-up, highlighter sweep, rewrite wipe, check marks, error copy. From the extension's `ui/panel.js` and the Word pane. |
 | `src/api.html` | The API client, the extension's `lib/api.js` as a plain script: `POST /v1/detect` and `/v1/humanize`, polling `/v1/runs/{id}`, readable errors. |
-| `src/mock.html` | Canned API runs for mock mode and the tests. |
+| `src/mock.html` | Canned API runs for mock mode and the tests, with the API client's shape (`runSkill`, `me`). |
 | `src/styles.html` | p3n colours and motion, the extension's CSS fitted to Docs' 300px sidebar. |
 | `src/appsscript.json` | Manifest: V8, the two scopes. |
 | `dev/` | Not uploaded: the local harness, tests, icons. |
@@ -107,20 +109,20 @@ Motion is kept to the result, as in the other clients: the score counts to its v
 
 ```bash
 npm test          # Code.js against a stand-in for DocumentApp (13 tests)
-npm run e2e       # the sidebar in headless Chrome, on the local harness, mock API (25 checks)
+npm run e2e       # the sidebar in headless Chrome, on the local harness, mock API (27 checks)
 LIVE=1 npm run e2e  # adds one Check and one Rewrite on the live API, keyless: 2 of the 10 free calls an hour
 npm run harness   # the harness on http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 ```
 
 - `npm test` loads `src/Code.js` with a small in-memory DocumentApp (Text elements with per-character attributes, range elements with inclusive offsets) and checks: reading across paragraphs, soft line breaks, replacing a word range with the majority formatting, the edge spaces, whole paragraphs, several paragraphs with an untouched heading, links, the refusals (edited text, tables, pictures), the find-once fallback, a dropped paragraph, and the key format.
-- `npm run e2e` checks Check, Rewrite and Replace on one paragraph and on several, Check again after Replace, the edited-text refusal, typed text (no Replace), nothing selected, the menu's Check-on-open, the free limit, the key screen (malformed, accepted, revoked, removed), reduced motion, and no page errors. Captures go to `dev/out/`. `CHROME=path/to/chrome` if Chrome isn't in the default Windows location.
+- `npm run e2e` checks Check, Rewrite and Replace on one paragraph and on several, Check again after Replace, the edited-text refusal, a stale rewrite after other text was taken in, typed text (no Replace), nothing selected, the menu's Check-on-open, the free limit, the key screen (malformed, accepted, revoked, removed), reduced motion, and no page errors. Captures go to `dev/out/`. `CHROME=path/to/chrome` if Chrome isn't in the default Windows location.
 - The harness's document side mimics `Code.js` on a web page, so it tests the sidebar, not Docs. What only Docs can show is in the live test below.
 
 ### Live test in Google Docs
 
-Not run yet: it needs a Google sign-in for clasp and a test document. The checks, in a test document, with mock mode first and then two live calls:
+Not run yet: it needs a Google sign-in for clasp and a test document. The checks, in a test document, in mock mode, so no free calls are used:
 
-- The sidebar's `fetch` to `api.p3n.si` works from the add-on sandbox (the keyless choice above depends on it).
+- The sidebar's `fetch` to `api.p3n.si` works from the add-on sandbox (the keyless choice above depends on it). Checked for free: paste a well-formed but unknown key on the key screen. `GET /v1/me` answers 401 "p3n doesn't accept this key" if the request got through, and "Can't reach p3n" if the sandbox blocked it. `/v1/me` doesn't count against the free hourly calls.
 - Check and Rewrite on a selection; Replace keeps the paragraph's style and the words' formatting; no empty paragraph appears; the new text is selected.
 - Ctrl+Z in the document undoes the whole Replace in one step.
 - Several paragraphs including a heading and a list item; a selection with a soft line break; a selection in a table cell; a selection that includes a picture (refused).

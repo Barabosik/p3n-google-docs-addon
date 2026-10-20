@@ -126,6 +126,22 @@ try {
     await page.close();
   }
 
+  // ---- other text taken in after the rewrite: that rewrite no longer belongs to the selection ----
+  {
+    const { page, frame } = await open('?mock=1');
+    await select(page, '#p3');
+    await click(frame, '#rewrite');
+    await frame.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent === 'Replace selection'), { timeout: 15000 });
+    await select(page, '#p2');
+    await click(frame, '#grab');
+    await frame.waitForFunction(() => document.querySelector('#text').value.startsWith('We shipped'), { timeout: 5000 });
+    await (await buttonByText(frame, 'Replace selection')).click();
+    await frame.waitForFunction(() => document.querySelector('.note.warn'), { timeout: 5000 });
+    ok('stale rewrite: refused after other text was taken in', /other text/.test(await frame.$eval('.note.warn', (n) => n.textContent)));
+    ok('stale rewrite: document left alone', (await docText(page, '#p2')).startsWith('We shipped the new billing page'));
+    await page.close();
+  }
+
   // ---- typed text: no Replace, Copy instead ----
   {
     const { page, frame } = await open('?mock=1');

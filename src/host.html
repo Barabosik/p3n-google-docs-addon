@@ -1,0 +1,87 @@
+<script>
+// Google Docs glue: the only part of the sidebar that knows it runs in Docs. The same adapter shape as the browser
+// extension's and the Word pane's: the key, the free count, grabSelection and replace, openSettings. Code.js does
+// the document work; this calls it through google.script.run.
+window.P3N_HOST = (() => {
+  const BOOT = window.P3N_BOOT || {};
+  // Opened outside Docs (the page on its own) there is no document; the box still works.
+  const available = !!window.google?.script?.run;
+
+  // Code.js through google.script.run, as a promise. Failures come back as a sentence the user can act on.
+  function server(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      if (!available) return reject(new Error('Open p3n from Extensions in Google Docs to use your document.'));
+      google.script.run.withSuccessHandler(resolve).withFailureHandler((e) => reject(new Error(trouble(e))))[fn](...args);
+    });
+  }
+  function trouble(e) {
+    const m = String(e?.message || e);
+    if (/authori[sz]|permission|access denied/i.test(m)) {
+      return 'Docs didn\'t let p3n reach the document. If you\'re signed in to more than one Google account, open the document in a window signed in to just one. Or reload the page and open p3n again.';
+    }
+    return 'p3n can\'t reach the document right now. Reload the page and open p3n again, or paste the text in the box.';
+  }
+
+  let key = BOOT.key || '';
+  let free = null;
+  // What the selection read as when it was last read or replaced. Replace sends it along, and Code.js writes
+  // only if the selection (or the one place that text is) still reads the same.
+  let docText = null;
+
+  return {
+    name: 'gdocs',
+    available,
+    mock: !!BOOT.mock,
+    job: BOOT.job || null, // 'detect' or 'humanize' when opened from Extensions → p3n → Check / Rewrite
+
+    // The key lives in the user's own properties for this add-on (Code.js), never in the document.
+    getKey: () => key,
+    async setKey(k) {
+      if (available) await server(k ? 'saveKey' : 'removeKey', k);
+      key = k || '';
+    },
+
+    // What X-Free-Remaining said last, while the sidebar is open.
+    free: { get: () => free, set: (n) => { free = n; } },
+
+    // { text, editable, blocked }: the selected text, whether Replace may write over it, and if not, why
+    // ('table', 'picture', 'equation', 'footnote', 'chip', 'other'). Reads only; nothing is sent to p3n.
+    async grabSelection() {
+      const got = await server('getSelectedText');
+      docText = got?.text || null;
+      return { text: got?.text || '', editable: !!got?.text && !got.blocked, blocked: got?.blocked || null };
+    },
+
+    // Puts `text` where the last grabbed selection was: { ok } or { ok: false, reason }. Selects the new text.
+    async replace(text) {
+      if (docText == null) return { ok: false, reason: 'gone' };
+      const r = await server('replaceSelection', docText, text);
+      if (r?.ok) docText = r.text;
+      return r || { ok: false, reason: 'error' };
+    },
+
+    undoKey: () => (/Mac/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? 'Cmd+Z' : 'Ctrl+Z'),
+
+    // The sidebar has its own key screen (app.html), as the Word pane does; the extension opens an options page.
+    openSettings: null,
+
+    // Copy: the clipboard API, or the older way where the sidebar's frame isn't allowed it.
+    async copy(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.className = 'sr';
+        ta.setAttribute('aria-hidden', 'true');
+        ta.value = text;
+        document.body.append(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+      }
+    },
+  };
+})();
+</script>
