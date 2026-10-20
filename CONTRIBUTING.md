@@ -24,7 +24,7 @@ Apps Script pages have no modules or separately served files, so each browser pa
 ```bash
 npm install
 npm test            # Code.js against a stand-in for DocumentApp (13 tests)
-npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (28 checks)
+npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (32 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
 ```

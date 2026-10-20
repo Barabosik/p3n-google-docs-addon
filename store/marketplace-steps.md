@@ -51,7 +51,7 @@ Google says any verified "top private domain" can be an authorized domain. `gith
 
 1. [user] Go to https://search.google.com/search-console with the publishing account. **Add property → URL prefix → `https://barabosik.github.io/` → Continue**.
 2. Pick **HTML file** and download `google<code>.html`.
-3. [lead] Commit that file, unchanged, to the root of `Barabosik/Barabosik.github.io` and push. Wait until `https://barabosik.github.io/google<code>.html` loads.
+3. [user or lead] Commit that file, unchanged, to the root of `Barabosik/Barabosik.github.io` (GitHub's **Add file → Upload files** will do). Wait until `https://barabosik.github.io/google<code>.html` loads.
 4. [user] Click **Verify**. Keep the file in that repo for good: removing it unverifies the domain.
 
 ## 3. Google Cloud project: [user]
@@ -81,7 +81,9 @@ An Editor add-on is published from a standalone Apps Script project, not one bou
 2. [us or user] `node dev/standalone.mjs`. It keeps a bound test project's `.clasp.json` as `.clasp.test.json`, creates the standalone project "p3n", restores the manifest that clasp overwrites, pushes `src/`, and prints the project's URL.
 3. [user] Open the project (the printed URL) and go to **Project Settings → Google Cloud Platform (GCP) Project → Change project**. Enter the project number from step 3 → **Set project**. This can't be undone.
 
-## 6. Test deployment: [us], in a window signed in to the publishing account only
+## 6. Test deployment: [user], in a window signed in to the publishing account only
+
+The demo video and screenshots need the user's screen, so steps 2–6 are one sitting for the user.
 
 1. In the editor: **Deploy → Test deployments → Editor add-on → Create new test**:
    - Version: Latest code.
