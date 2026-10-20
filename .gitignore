@@ -2,4 +2,5 @@ node_modules/
 dev/out/
 # Per developer: the Apps Script project this checkout pushes to (copy .clasp.json.example), and clasp's login.
 .clasp.json
+.clasp.*.json
 .clasprc.json

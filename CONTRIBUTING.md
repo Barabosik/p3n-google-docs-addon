@@ -92,4 +92,4 @@ Not yet checked in Docs: soft line breaks, table cells, pictures and a second do
 
 ## Publishing
 
-The Marketplace copy is in [store/listing.md](store/listing.md) and the steps in [store/marketplace-steps.md](store/marketplace-steps.md). The homepage and privacy page for Google's consent screen are in `docs/`, served by GitHub Pages.
+The Marketplace copy is in [store/listing.md](store/listing.md) and the steps in [store/marketplace-steps.md](store/marketplace-steps.md). The homepage, privacy policy and terms that Google's consent screen and listing link to are in `docs/`, served by GitHub Pages. `docs/privacy.html` and `PRIVACY.md` say the same thing: change both. `python dev/banner.py` makes the listing's card banner.

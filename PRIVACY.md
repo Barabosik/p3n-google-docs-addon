@@ -1,8 +1,8 @@
-# Privacy policy: p3n for Google Docs
+# Privacy policy: the p3n add-on for Google Docs
 
 Effective 20 October 2026.
 
-p3n for Google Docs is a Google Docs add-on published by Nikita Andreiev. It sends text to p3n only when you ask it to.
+p3n is an add-on for Google Docs™ published by Nikita Andreiev. It sends text to the p3n service only when you ask it to.
 
 ## What it reads from Google
 
@@ -26,7 +26,7 @@ When you open the sidebar, it reads your current selection to show it in the tex
 
 To stop all access, remove the add-on in Google Docs (Extensions → Add-ons → Manage add-ons) and revoke it at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 
-## What p3n does with the text
+## What the p3n service does with the text
 
 - It keeps the text for up to 7 days, to return results and debug failures, then deletes it.
 - It sends the text through OpenRouter to the AI model providers that run the check or rewrite.
@@ -37,10 +37,10 @@ p3n's full policy is at [p3n.si/privacy](https://p3n.si/privacy).
 
 ## Google user data
 
-p3n for Google Docs' use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Text from your document is used only to run the check or rewrite you asked for. It is never sold, used for advertising, or read by people, except where you ask for help with a specific problem or the law requires it.
+The p3n add-on's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Text from your document is used only to run the check or rewrite you asked for. It is never sold, used for advertising, or read by people, except where you ask for help with a specific problem or the law requires it.
 
 ## Contact
 
 Questions about the add-on: [GitHub issues](https://github.com/Barabosik/p3n-google-docs-addon/issues). Questions about p3n: [p3n.si/contact](https://p3n.si/contact).
 
-Changes to this policy are published here with a new date.
+Changes to this policy are published here with a new date. The same policy is at https://barabosik.github.io/p3n-google-docs-addon/privacy.html. Google Docs is a trademark of Google LLC.
