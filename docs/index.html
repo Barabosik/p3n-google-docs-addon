@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>p3n for Google Docs</title>
+  <meta name="description" content="A Google Docs add-on that checks selected text for signs of AI writing and rewrites it so it reads as human-written.">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a href="./"><img src="icon-128.png" alt=""></a>
+      <div>
+        <div class="name"><a href="./">p3n for Google Docs</a></div>
+        <div class="by">A Google Docs add-on by Nikita Andreiev</div>
+      </div>
+    </header>
+
+    <main>
+      <h1>Check and rewrite AI-sounding text in Google Docs</h1>
+      <p class="lede">Select text in a document. p3n tells you whether it reads as AI-written and which sentences give it away. Or it rewrites the text and puts the new version where your selection was.</p>
+
+      <div class="cta">
+        <a class="btn primary" aria-disabled="true">Google Workspace Marketplace: coming soon</a>
+        <a class="btn ghost" href="https://github.com/Barabosik/p3n-google-docs-addon">Source on GitHub</a>
+      </div>
+
+      <div class="shots">
+        <img src="docs-check.png" width="459" height="1104" alt="The p3n sidebar in Google Docs, showing a 97% likely-AI score and the sentences that read as AI">
+        <img src="docs-rewrite.png" width="459" height="1104" alt="The p3n sidebar showing a rewrite of the selected text, with a Copy button">
+      </div>
+      <p class="caption">The p3n sidebar next to a document.</p>
+
+      <h2>What it does</h2>
+      <ul>
+        <li><strong>Check for AI.</strong> A score, a one-line reason, and the sentences that read as AI.</li>
+        <li><strong>Rewrite.</strong> A version that keeps your facts and drops the filler. <strong>Replace selection</strong> puts it in place of your text with headings, lists and formatting kept, and one Ctrl+Z undoes it.</li>
+        <li>Start it from <strong>Extensions → p3n</strong>, or paste any text into the sidebar.</li>
+      </ul>
+
+      <h2>Free, or with a key</h2>
+      <p>You get 10 checks or rewrites an hour without an account, up to 5,000 characters each. For more, create an API key at <a href="https://p3n.si/dashboard/keys">p3n.si</a> and paste it into the sidebar.</p>
+
+      <h2>How it uses your Google data</h2>
+      <p>The add-on asks Google for two permissions:</p>
+      <table>
+        <tr><th>Permission</th><th>Why</th></tr>
+        <tr><td>See and edit the document it's used in</td><td>To read the text you selected, and to put the rewrite in its place when you click Replace selection. It can't open any other document or file.</td></tr>
+        <tr><td>Show its menu and sidebar in Google Docs</td><td>For the Extensions menu items and the sidebar.</td></tr>
+      </table>
+      <p>It sends the text in the sidebar to <code>api.p3n.si</code> only when you click Check for AI or Rewrite. It doesn't read your name, email, contacts or Drive, keeps no history and has no analytics. The details are in the <a href="privacy.html">privacy policy</a>.</p>
+    </main>
+
+    <footer>
+      <span>© 2026 Nikita Andreiev</span>
+      <a href="privacy.html">Privacy policy</a>
+      <a href="https://github.com/Barabosik/p3n-google-docs-addon/issues">Support</a>
+      <a href="https://github.com/Barabosik/p3n-google-docs-addon">Source</a>
+      <a href="https://p3n.si">p3n.si</a>
+    </footer>
+  </div>
+</body>
+</html>

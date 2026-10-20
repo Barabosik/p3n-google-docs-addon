@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy · p3n for Google Docs</title>
+  <meta name="description" content="What the p3n for Google Docs add-on reads, sends and keeps.">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a href="./"><img src="icon-128.png" alt=""></a>
+      <div>
+        <div class="name"><a href="./">p3n for Google Docs</a></div>
+        <div class="by">A Google Docs add-on by Nikita Andreiev</div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Keep in step with PRIVACY.md in the repo. -->
+      <h1>Privacy policy</h1>
+      <p class="lede">Effective 20 October 2026. p3n for Google Docs is a Google Docs add-on published by Nikita Andreiev. It sends text to p3n only when you ask it to.</p>
+
+      <h2>What it reads from Google</h2>
+      <p>The add-on asks Google for two permissions:</p>
+      <ul>
+        <li><strong>The document you use it in</strong> (<code>documents.currentonly</code>). It reads the text you selected, and writes the rewrite in its place when you click Replace selection. It can't open any other document or file.</li>
+        <li><strong>Its menu and sidebar</strong> (<code>script.container.ui</code>). That's how it shows its Extensions menu items and the sidebar.</li>
+      </ul>
+      <p>When you open the sidebar, it reads your current selection to show it in the text box. That text stays between Google Docs and the sidebar until you click a button. The add-on doesn't read your name, email address, contacts or Drive.</p>
+
+      <h2>What it sends, and where</h2>
+      <ul>
+        <li><strong>What.</strong> The text in the sidebar's box (your selection, or text you typed), when you click Check for AI or Rewrite. If you added an API key, the key goes with it so p3n can bill your account.</li>
+        <li><strong>Where.</strong> Only to <code>api.p3n.si</code>, over HTTPS, straight from your browser.</li>
+        <li><strong>Nothing else.</strong> No history, analytics or ads, and nothing is stored in your document.</li>
+      </ul>
+
+      <h2>What it keeps</h2>
+      <ul>
+        <li><strong>Your API key</strong>, if you add one, in Google's per-user storage for this add-on (Apps Script user properties). Other people with access to the document can't see it. <strong>Remove key</strong> in the sidebar deletes it.</li>
+        <li>Google keeps a log of the add-on's errors for its developer, as it does for every Apps Script add-on. The add-on puts no document text or keys in those messages.</li>
+      </ul>
+      <p>To stop all access, remove the add-on in Google Docs (Extensions → Add-ons → Manage add-ons) and revoke it at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+
+      <h2>What p3n does with the text</h2>
+      <ul>
+        <li>It keeps the text for up to 7 days, to return results and debug failures, then deletes it.</li>
+        <li>It sends the text through OpenRouter to the AI model providers that run the check or rewrite.</li>
+        <li>It logs the time and IP address of each call. That's how the free limit works.</li>
+        <li>It doesn't sell data or use your text to train models.</li>
+      </ul>
+      <p>p3n's full policy is at <a href="https://p3n.si/privacy">p3n.si/privacy</a>.</p>
+
+      <h2>Google user data</h2>
+      <p>p3n for Google Docs' use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Text from your document is used only to run the check or rewrite you asked for. It is never sold, used for advertising, or read by people, except where you ask for help with a specific problem or the law requires it.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about the add-on: <a href="https://github.com/Barabosik/p3n-google-docs-addon/issues">GitHub issues</a>. Questions about p3n: <a href="https://p3n.si/contact">p3n.si/contact</a>.</p>
+      <p>Changes to this policy are published here with a new date.</p>
+    </main>
+
+    <footer>
+      <span>© 2026 Nikita Andreiev</span>
+      <a href="./">Home</a>
+      <a href="https://github.com/Barabosik/p3n-google-docs-addon/issues">Support</a>
+      <a href="https://github.com/Barabosik/p3n-google-docs-addon">Source</a>
+      <a href="https://p3n.si">p3n.si</a>
+    </footer>
+  </div>
+</body>
+</html>

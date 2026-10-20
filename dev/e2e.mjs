@@ -24,7 +24,8 @@ const settled = () => {
 
 await mkdir(OUT, { recursive: true });
 const { server, base } = await startHarness();
-const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--window-size=1280,860', '--lang=en-US'] });
+// CI runners have no usable Chrome sandbox.
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--window-size=1280,860', '--lang=en-US', ...(process.env.CI ? ['--no-sandbox'] : [])] });
 const errors = [];
 
 async function open(query, { calm = false } = {}) {

@@ -1,9 +1,14 @@
 {
-  "name": "p3n-gdocs",
+  "name": "p3n-google-docs-addon",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "p3n for Google Docs: check selected text for AI and rewrite it so it doesn't read as AI, in a sidebar. The add-on is src/; the rest is dev tooling.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Barabosik/p3n-google-docs-addon.git"
+  },
   "scripts": {
     "harness": "node dev/harness.mjs",
     "test": "node --test dev/code.test.mjs",

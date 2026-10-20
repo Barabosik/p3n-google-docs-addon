@@ -1,0 +1,40 @@
+# The unit tests (Code.js against a stand-in DocumentApp) and the end-to-end checks of the sidebar in headless
+# Chrome, with the mock API. Never calls api.p3n.si and never touches Google.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Install dev tools
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      # The runner's own Chrome. CI is set, so it runs without its sandbox.
+      - name: End-to-end (mock API)
+        if: ${{ !cancelled() }}
+        run: CHROME="$(command -v google-chrome)" npm run e2e
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: screenshots
+          path: dev/out/*.png
+          if-no-files-found: warn
