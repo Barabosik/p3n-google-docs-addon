@@ -17,7 +17,8 @@ window.P3N_HOST = (() => {
   function trouble(e) {
     const m = String(e?.message || e);
     if (/authori[sz]|permission|access denied/i.test(m)) {
-      return 'Docs didn\'t let p3n reach the document. If you\'re signed in to more than one Google account, open the document in a window signed in to just one. Or reload the page and open p3n again.';
+      // Google's consent lets people tick one permission and not the other; p3n needs both.
+      return 'Docs didn\'t let p3n reach the document. Reload the page, open p3n from Extensions again and allow both permissions it asks for. If you\'re signed in to more than one Google account, use a window signed in to just the one that has this document.';
     }
     return 'p3n can\'t reach the document right now. Reload the page and open p3n again, or paste the text in the box.';
   }

@@ -8,7 +8,7 @@
     "harness": "node dev/harness.mjs",
     "test": "node --test dev/code.test.mjs",
     "e2e": "node dev/e2e.mjs",
-    "push": "clasp push",
+    "push": "clasp push --force",
     "open": "clasp open-script"
   },
   "devDependencies": {

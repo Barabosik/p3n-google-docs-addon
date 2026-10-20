@@ -38,25 +38,30 @@ The free tier allows 10 calls an hour per IP. Where the call comes from decides 
 
 So keyless use works as it does on p3n.si, and a key is optional, as it is in the extension and the Word add-in. The key is stored with `PropertiesService.getUserProperties()`: per user and per add-on, in the user's Google account, never in the document (document properties would be readable by every editor and would travel with copies). If Google ever blocks `fetch` from add-on sidebars, the fallback is `UrlFetchApp` with a required key.
 
-## Install (test deployment)
+## Install for testing
 
-You need Node 18+, a Google account and a Google Doc to test in.
+You need Node 18+ and a Google account to test with.
 
 1. `npm install` in this folder.
-2. Turn on the Apps Script API for your account: <https://script.google.com/home/usersettings>.
-3. `npx clasp login` (opens a Google sign-in in the browser).
-4. Create the Apps Script project, standalone so it can later be published:
+2. Turn on the Apps Script API for that account: <https://script.google.com/home/usersettings> (pick the account first if you're signed in to several). clasp refuses to create anything until it's on.
+3. `npx clasp login`. It prints a Google sign-in URL and waits; pick the test account in Google's chooser. clasp asks for its own scopes (Apps Script projects and deployments, Drive files it creates, Cloud and logging access); the token stays in `~/.clasprc.json` on your computer, and you can revoke "clasp" at <https://myaccount.google.com/permissions>.
+4. The quickest test: a new Google Doc with the add-on bound to it (this is how it was tested).
    ```bash
-   npx clasp create --type standalone --title "p3n for Google Docs" --rootDir src
+   npx clasp create --type docs --title "p3n test" --rootDir src
+   git checkout src/appsscript.json   # clasp replaces our manifest with its default one
+   npx clasp push --force
    ```
-   This writes `.clasp.json` (ignored by git; `.clasp.json.example` shows its shape). With an existing project, copy the example and paste its script ID. If clasp pulled a default `appsscript.json` over ours, `git checkout src/appsscript.json`.
-5. `npm run push` uploads `src/` (it asks once to overwrite the manifest: yes).
-6. `npm run open` opens the project in the Apps Script editor. There: **Deploy → Test deployments → Install** (pick *Editor add-on* if asked), or **Select type → Editor Add-on → Test with latest code**, choose your test document, and **Execute** it. The document opens with **Extensions → p3n for Google Docs**.
-7. The first menu click asks for the scopes below. Google shows its "Google hasn't verified this app" screen until the add-on is verified: **Advanced → Go to p3n for Google Docs (unsafe)** for your own test.
+   This writes `.clasp.json` with the script and document IDs (ignored by git; `.clasp.json.example` shows its shape). The Doc is in your Drive, named "p3n test", shared with no one.
+5. Open the Doc and reload it. The menu is under **Extensions → p3n test** (a bound script's menu takes the project's name; a published add-on's takes the add-on's).
+6. The first menu click shows "Authorization required", then a Google sign-in popup:
+   - "Google hasn't verified this app": **Advanced → Go to p3n test (unsafe)**. It's your own script.
+   - Google then lists the two scopes below as checkboxes. Tick both (**Select all**) and **Continue**. With one left out, the sidebar can't read the document and says so.
 
-After a change, `npm run push` and reload the document.
+For the Marketplace the add-on has to be a standalone project instead: `npx clasp create --type standalone --title "p3n for Google Docs" --rootDir src`, push, then **Deploy → Test deployments → Editor add-on** in the Apps Script editor (`npm run open`) and pick a test document.
 
-**Mock mode:** in the Apps Script editor, run `devMockOn` (Run menu, function picker), then reopen the sidebar. It shows a *Mock API* badge and answers from canned runs in `src/mock.html`: nothing goes to p3n and no free calls are used. `devMockOff` turns it off. Both change only your own properties.
+After a change, `npx clasp push --force` and reload the document.
+
+**Mock mode:** in the Apps Script editor (Extensions → Apps Script in the Doc, or `npm run open`), pick `devMockOn` in the function list and click Run, then reopen the sidebar. It shows a *Mock API* badge and answers from canned runs in `src/mock.html`: nothing goes to p3n and no free calls are used. `devMockOff` turns it off. Both change only your own properties.
 
 ## Scopes
 
@@ -66,6 +71,8 @@ Set in `src/appsscript.json`, so Apps Script doesn't widen them.
 | --- | --- |
 | `documents.currentonly` | Read the selection and replace it, in the document the add-on is used in, and no other. |
 | `script.container.ui` | The Extensions menu entries and the sidebar. |
+
+Google's consent screen shows them as "View and manage documents that this application has been installed in" and "Display and run third-party web content in prompts and sidebars inside Google applications", each with its own checkbox. Google counts the request as sensitive: until the add-on is verified, users get the "Google hasn't verified this app" warning first.
 
 Nothing else: no Drive access, no other documents, no `script.external_request` (the API is called from the browser, see above), no email address. `PropertiesService` (the API key) needs no scope.
 
