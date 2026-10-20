@@ -15,6 +15,7 @@ Google's rules that shape this copy:
 | Language | English |
 | Application icon 128×128 | `dev/icons/128.png` |
 | Application icon 32×32 | `dev/icons/32.png` |
+| Application icon 48×48 | `dev/icons/48.png` (96×96 left empty) |
 | Card banner 220×140 | `store/card-banner-220x140.png` (`python dev/banner.py`) |
 | Screenshots | `store/screenshot-1.png` (Check) and `store/screenshot-2.png` (a rewrite with Replace selection), 1280×800. Both come from the live test deployment on 2026-10-20, with the account picture painted out. Shot 2 was recaptured after the headline fix. |
 | Terms of service | https://barabosik.github.io/p3n-google-docs-addon/terms.html |
@@ -22,6 +23,7 @@ Google's rules that shape this copy:
 | Support | https://github.com/Barabosik/p3n-google-docs-addon/issues |
 | Help (Editor add-ons) | https://barabosik.github.io/p3n-google-docs-addon/ |
 | Report issue (Editor add-ons) | https://github.com/Barabosik/p3n-google-docs-addon/issues |
+| Post Install Tip (required) | In a Google Docs document, select some text, then open Extensions → p3n → Open p3n. |
 | Pricing | Free of charge with paid features: the add-on is free, and more than 10 calls an hour takes a paid p3n API key. |
 
 Short description (146 characters):
@@ -59,7 +61,7 @@ Google Docs is a trademark of Google LLC.
 | App visibility | **Public** (decided 2026-10-20). It can't be changed after saving, and a personal (@gmail.com) account can only publish publicly anyway. |
 | Installation settings | Individual + Admin install |
 | App integration | Editor add-on → Docs add-on: the standalone script's **Script ID** (Apps Script → Project Settings → IDs) and the deployment's **version number** (Deploy → Manage deployments) |
-| OAuth scopes | `https://www.googleapis.com/auth/documents.currentonly`, `https://www.googleapis.com/auth/script.container.ui`. They must match `src/appsscript.json` and the consent screen's Data Access list exactly. |
+| OAuth scopes | `https://www.googleapis.com/auth/documents.currentonly`, `https://www.googleapis.com/auth/script.container.ui`. They must match `src/appsscript.json` and the consent screen's Data Access list exactly. The SDK form also lists `https://www.googleapis.com/auth/userinfo.email` and `https://www.googleapis.com/auth/userinfo.profile` by default, and they stay there. |
 | Developer name | Nikita Andreiev |
 | Developer website | https://barabosik.github.io/p3n-google-docs-addon/ |
 | Developer email | The publishing account's address (decided 2026-10-20; kept out of this repo). Google doesn't show it on the listing. |
