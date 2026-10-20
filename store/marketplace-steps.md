@@ -11,7 +11,7 @@ Checked against Google's docs in October 2026; the links are at the end.
 
 **Status, 2026-10-20:**
 - Steps 1–6 are done. The Search Console domain is verified, the Cloud project exists, the consent screen is In production, and the standalone project is linked and test-deployed. The demo video is recorded, and the screenshots are in `store/`.
-- Next: the YouTube upload, then steps 7–10.
+- The demo video is on YouTube, Unlisted. Its link is in the team's notes, not here, because the video shows the publishing account. Next: steps 7–10.
 - Project numbers, IDs and the client ID stay out of this repo.
 
 ## 0. Before starting
