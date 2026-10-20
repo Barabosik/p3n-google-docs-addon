@@ -4,6 +4,7 @@
 //   npm run e2e                 mock API
 //   LIVE=1 npm run e2e          also one Check and one Rewrite on the live API, keyless (2 of the 10 free calls an hour)
 //   CHROME=path/to/chrome       if Chrome isn't in the default Windows location
+//   SLOW=4                      slows the page's CPU 4x, to shake out timing races before CI does
 // Captures land in dev/out/.
 import puppeteer from 'puppeteer-core';
 import path from 'node:path';
@@ -32,6 +33,7 @@ async function open(query, { calm = false } = {}) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 860, deviceScaleFactor: 2 });
   if (calm) await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  if (process.env.SLOW) await page.emulateCPUThrottling(Number(process.env.SLOW) || 4);
   page.on('pageerror', (e) => errors.push(`${query}: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${query}: ${m.text()}`); });
   await page.goto(`${base}/${query}`);
@@ -58,6 +60,12 @@ const shot = async (page, name) => {
 const click = (frame, sel) => frame.$eval(sel, (b) => b.click());
 const buttonByText = (frame, text) => frame.evaluateHandle((t) => [...document.querySelectorAll('button, a')].find((b) => b.textContent.trim() === t), text);
 const docText = (page, sel) => page.$eval(sel, (n) => n.textContent);
+// The key screen slides in with a view transition: wait until it shows and its field has focus, or typing
+// lands in the hidden field (slow CI runners hit this).
+const openKeyScreen = async (frame) => {
+  await click(frame, '#account');
+  await frame.waitForFunction(() => !document.querySelector('#settings').hidden && document.activeElement === document.querySelector('#key'), { timeout: 5000 });
+};
 
 try {
   // ---- Check, Rewrite, Replace on one paragraph ----
@@ -193,8 +201,7 @@ try {
   // ---- API key screen ----
   {
     const { page, frame } = await open('?mock=1');
-    await click(frame, '#account');
-    await frame.waitForSelector('#settings:not([hidden])');
+    await openKeyScreen(frame);
     await frame.type('#key', 'sk-not-a-p3n-key');
     await frame.waitForFunction(() => document.querySelector('#key-status').classList.contains('warn'));
     ok('key: a malformed key is caught before any call', true);
@@ -207,7 +214,7 @@ try {
     await click(frame, '#back');
     await frame.waitForFunction(() => /Balance \$4\.20/.test(document.querySelector('#quota').textContent), { timeout: 5000 });
     ok('key: footer shows the balance', true);
-    await click(frame, '#account');
+    await openKeyScreen(frame);
     await frame.$eval('#key', (k) => { k.value = ''; });
     await frame.type('#key', `p3n_0123456789ab_bad${'A'.repeat(29)}`);
     await frame.waitForFunction(() => document.querySelector('#key-status').classList.contains('error'), { timeout: 5000 });

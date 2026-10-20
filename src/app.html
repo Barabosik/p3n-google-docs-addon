@@ -244,7 +244,8 @@
 
   // ---- settings: the API key, checked with p3n before it's saved ---------------------------------
 
-  // The settings view slides over the main one (View Transitions where the browser has them).
+  // The settings view slides over the main one (View Transitions where the browser has them). Resolves once the
+  // new view is in place: a transition applies it a frame or more later, and focus can't land on a hidden field.
   function swap(toSettings) {
     const apply = () => {
       els.main.hidden = toSettings;
@@ -252,22 +253,21 @@
       els.quota.hidden = toSettings;
       document.documentElement.dataset.view = toSettings ? 'settings' : 'main';
     };
-    if (document.startViewTransition && !R.calm.matches) document.startViewTransition(apply);
-    else apply();
+    if (document.startViewTransition && !R.calm.matches) return document.startViewTransition(apply).updateCallbackDone.catch(() => {});
+    apply();
+    return Promise.resolve();
   }
 
   function openSettings() {
     if (HOST.openSettings) return HOST.openSettings();
     els.key.value = key();
     say('');
-    swap(true);
-    requestAnimationFrame(() => els.key.focus());
+    swap(true).then(() => els.key.focus());
     if (key()) checkAndSave(key());
   }
 
   function closeSettings() {
-    swap(false);
-    requestAnimationFrame(() => els.account.focus());
+    swap(false).then(() => els.account.focus());
     refreshInput();
     refreshAccount();
   }
