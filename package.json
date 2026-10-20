@@ -14,6 +14,7 @@
     "test": "node --test dev/code.test.mjs",
     "e2e": "node dev/e2e.mjs",
     "push": "clasp push --force",
+    "push:dev": "clasp push --force --ignore .claspignore.dev",
     "open": "clasp open-script"
   },
   "devDependencies": {

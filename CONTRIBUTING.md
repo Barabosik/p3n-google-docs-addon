@@ -6,7 +6,8 @@ An Apps Script **Editor add-on**: `src/` is what goes to Google, plain Apps Scri
 
 | File | Does |
 | --- | --- |
-| `src/Code.js` | Apps Script: the menu, opening the sidebar, reading the selection, replacing it, saving or removing the key, mock mode on and off. |
+| `src/Code.js` | Apps Script: the menu, opening the sidebar, reading the selection, replacing it, saving or removing the key. |
+| `src/dev.js` | Mock mode on and off. Development only: a release push leaves it out (below). |
 | `src/Sidebar.html` | The sidebar's markup. Pulls in the parts below as Apps Script template includes. |
 | `src/host.html` | The Docs adapter, the only sidebar code that knows it runs in Docs: the key (user properties via `Code.js`), the free count, `grabSelection()` → `{ text, editable, blocked }`, `replace(text)` → `{ ok, reason }`, `copy`. |
 | `src/app.html` | The controller: the text box, running a check or rewrite, Replace, the key screen. Reaches the document only through the adapter, and p3n only through the API client. |
@@ -23,7 +24,7 @@ Apps Script pages have no modules or separately served files, so each browser pa
 
 ```bash
 npm install
-npm test            # Code.js against a stand-in for DocumentApp (13 tests)
+npm test            # Code.js against a stand-in for DocumentApp (15 tests)
 npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (32 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
@@ -45,14 +46,16 @@ You need Node 18+ and a Google account to test with.
    ```bash
    npx clasp create --type docs --title "p3n test" --rootDir src
    git checkout src/appsscript.json   # clasp swaps in its default manifest
-   npx clasp push --force
+   npm run push:dev
    ```
    `.clasp.json` now holds your script and document IDs. Git ignores it, and `.clasp.json.example` shows the format.
 4. Open the document, reload it, and use **Extensions → p3n test**. Google warns that the app isn't verified (**Advanced → Go to p3n test**), then lists the two scopes as checkboxes: tick both.
 
-After a change: `npx clasp push --force`, then reopen the sidebar.
+After a change: `npm run push:dev`, then reopen the sidebar.
 
 **Mock mode.** In the Apps Script editor (`npm run open`), run `devMockOn`, then reopen the sidebar. It shows a *Mock API* badge and answers from `src/mock.html`, so no free calls are used. `devMockOff` turns it off.
+
+**Dev and release pushes.** `npm run push:dev` sends all of `src/`. `npm run push` (and `dev/standalone.mjs`) leaves out `src/dev.js`, as `.claspignore` says. Without that file there's no mock mode, so a release build always calls p3n and never shows the badge. Push the published project only with `npm run push`. `npm test` checks both ignore files.
 
 **Several Google accounts.** With more than one account signed in, and the document owned by one that isn't the browser's default, Apps Script refuses every call from the sidebar ("PERMISSION_DENIED … reading from storage", a [known bug](https://discuss.google.dev/t/how-is-everyone-handling-the-dreaded-authuser-0-multiple-accounts-bug-in-apps-script-add-ons/363446)). Reading the selection, Replace and the key stop working, while typed text still works. Test in a browser profile signed in to one account. The sidebar's error tells users the same.
 

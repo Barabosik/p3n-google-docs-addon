@@ -17,7 +17,7 @@ if (existsSync('.clasp.json')) {
 }
 run('npx clasp create --type standalone --title "p3n" --rootDir src');
 run('git checkout -- src/appsscript.json'); // clasp swaps in its default manifest
-run('npx clasp push --force');
+run('npx clasp push --force'); // a release push: .claspignore leaves out src/dev.js, so no mock mode
 
 const { scriptId } = JSON.parse(readFileSync('.clasp.json', 'utf8'));
 console.log(`\nDone. The project: https://script.google.com/home/projects/${scriptId}/edit`);

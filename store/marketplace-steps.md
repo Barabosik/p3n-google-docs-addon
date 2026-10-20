@@ -78,7 +78,7 @@ A published add-on needs its own standard Cloud project. The default project App
 An Editor add-on is published from a standalone Apps Script project, not one bound to a document.
 
 1. [user] If clasp is logged in to another account: `npx clasp logout`, then `npx clasp login`, and pick the publishing account. The Apps Script API must be on for it: https://script.google.com/home/usersettings.
-2. [us or user] `node dev/standalone.mjs`. It keeps a bound test project's `.clasp.json` as `.clasp.test.json`, creates the standalone project "p3n", restores the manifest that clasp overwrites, pushes `src/`, and prints the project's URL.
+2. [us or user] `node dev/standalone.mjs`. It keeps a bound test project's `.clasp.json` as `.clasp.test.json`, creates the standalone project "p3n", restores the manifest that clasp overwrites, pushes `src/` without the dev-only `src/dev.js` (so no mock mode and no Mock API badge), and prints the project's URL.
 3. [user] Open the project (the printed URL) and go to **Project Settings → Google Cloud Platform (GCP) Project → Change project**. Enter the project number from step 3 → **Set project**. This can't be undone.
 
 ## 6. Test deployment: [user], in a window signed in to the publishing account only
@@ -101,7 +101,7 @@ The demo video and screenshots need the user's screen, so steps 2–6 are one si
 
 **Deploy → New deployment → ⚙ next to Select type → Add-on**. Description: `0.1.0` → **Deploy**. Then **Deploy → Manage deployments**: note the **version number**. Also note the **Script ID** from **Project Settings → IDs**. Neither is committed: the Script ID goes in the Marketplace SDK, nowhere else.
 
-Later updates: **Manage deployments → ✎ the active deployment → Version: New version → Deploy**, then enter the new version number in the SDK's App Configuration. Don't make a new deployment for an update.
+Later updates: `npm run push` (never `push:dev`, which adds mock mode), then **Manage deployments → ✎ the active deployment → Version: New version → Deploy**, then enter the new version number in the SDK's App Configuration. Don't make a new deployment for an update.
 
 ## 8. Marketplace SDK: [user] clicks, values from listing.md
 

@@ -10,7 +10,6 @@
  */
 
 const PROP_KEY = 'p3n.apiKey';
-const PROP_MOCK = 'p3n.mock';
 const KEY_FORMAT = /^p3n_[0-9a-f]{12}_[A-Za-z0-9]{32}$/;
 
 // ---- menu and sidebar ----------------------------------------------------------------------------
@@ -39,7 +38,7 @@ function openSidebar_(job) {
   page.boot = JSON.stringify({
     job: job,
     key: props.getProperty(PROP_KEY) || '',
-    mock: props.getProperty(PROP_MOCK) === '1',
+    mock: typeof devMock_ === 'function' && devMock_(), // dev.js, which a release push leaves out
   }).replace(/</g, '\\u003c');
   DocumentApp.getUi().showSidebar(page.evaluate().setTitle('p3n'));
 }
@@ -62,11 +61,6 @@ function removeKey() {
   PropertiesService.getUserProperties().deleteProperty(PROP_KEY);
   return true;
 }
-
-// Mock mode, for testing: the sidebar answers with canned API runs and sends nothing to p3n. Run these from
-// the Apps Script editor (they change only your own properties), then reopen the sidebar.
-function devMockOn() { PropertiesService.getUserProperties().setProperty(PROP_MOCK, '1'); }
-function devMockOff() { PropertiesService.getUserProperties().deleteProperty(PROP_MOCK); }
 
 // ---- reading the selection -----------------------------------------------------------------------
 // The sidebar shows, and the API gets, the selected text of each paragraph with a blank line between

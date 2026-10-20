@@ -5,7 +5,7 @@
 //   node --test dev/code.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 
@@ -97,12 +97,28 @@ function makeDoc(...paras) {
   return doc;
 }
 
-async function load(doc) {
-  const code = await readFile(path.resolve(import.meta.dirname, '..', 'src', 'Code.js'), 'utf8');
+const ROOT = path.resolve(import.meta.dirname, '..');
+const SRC = path.join(ROOT, 'src');
+
+// Code.js, plus dev.js as in a dev push, with the user's properties and the sidebar stubbed. `shown` collects
+// the sidebars opened.
+async function load(doc, { dev = false, props = {} } = {}) {
+  const read = (name) => readFile(path.join(SRC, name), 'utf8');
+  const code = (await read('Code.js')) + (dev ? `\n${await read('dev.js')}` : '');
+  const store = new Map(Object.entries(props));
+  const shown = [];
   const ctx = vm.createContext({
-    DocumentApp: { ElementType: ET, Attribute: Object.fromEntries(ATTRS.map((k) => [k, k])), getActiveDocument: () => doc },
+    DocumentApp: {
+      ElementType: ET, Attribute: Object.fromEntries(ATTRS.map((k) => [k, k])), getActiveDocument: () => doc,
+      getUi: () => ({ showSidebar: (page) => shown.push(page) }),
+    },
+    PropertiesService: {
+      getUserProperties: () => ({ getProperty: (k) => store.get(k) ?? null, setProperty: (k, v) => store.set(k, v), deleteProperty: (k) => store.delete(k) }),
+    },
+    HtmlService: { createTemplateFromFile: () => { const t = { evaluate: () => ({ setTitle: () => t }) }; return t; } },
   });
-  return vm.runInContext(`${code}\n;({ getSelectedText, replaceSelection, blocksOf_, plan_, saveKey })`, ctx);
+  const api = vm.runInContext(`${code}\n;({ getSelectedText, replaceSelection, blocksOf_, plan_, saveKey, showSidebar })`, ctx);
+  return Object.assign(api, { shown });
 }
 
 const textOf = (p) => p.children[0].text;
@@ -278,4 +294,27 @@ test('saveKey takes only a well-formed p3n key', async () => {
   const c = await load(makeDoc(para('x')));
   assert.throws(() => c.saveKey('sk-123'));
   assert.throws(() => c.saveKey('p3n_abc'));
+});
+
+test('mock mode needs dev.js, which a release push leaves out', async () => {
+  const boot = async (opts) => {
+    const c = await load(makeDoc(para('x')), opts);
+    c.showSidebar();
+    return JSON.parse(c.shown[0].boot);
+  };
+  assert.equal((await boot({ props: { 'p3n.mock': '1' } })).mock, false);
+  assert.equal((await boot({ dev: true, props: { 'p3n.mock': '1' } })).mock, true);
+  assert.equal((await boot({ dev: true })).mock, false);
+});
+
+test('npm run push leaves out dev.js and nothing else, npm run push:dev sends it all', async () => {
+  const { default: micromatch } = await import('micromatch'); // the matcher clasp applies its ignore file with
+  const files = (await readdir(SRC)).sort();
+  const pushed = async (ignore) => {
+    const rules = (await readFile(path.join(ROOT, ignore), 'utf8')).split(/\r?\n/).filter(Boolean);
+    return micromatch.not(files, rules, { dot: true }).sort();
+  };
+  assert.ok(files.includes('dev.js'));
+  assert.deepEqual(await pushed('.claspignore'), files.filter((f) => f !== 'dev.js'));
+  assert.deepEqual(await pushed('.claspignore.dev'), files);
 });
