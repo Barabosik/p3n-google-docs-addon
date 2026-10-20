@@ -1,0 +1,79 @@
+<script>
+// Mock mode (devMockOn in Code.js, or the dev harness): canned API runs with the same shape as the real ones,
+// so the sidebar can be tried and tested without spending any of the free hourly calls. Nothing leaves the page.
+window.P3N_MOCK = (() => {
+  const { ApiError, sleep } = window.P3N_API;
+  // Stock phrases: a check flags them, a rewrite takes them out.
+  const STOCK = [
+    [/\bIn today's fast-paced world, /gi, ''],
+    [/\bit's worth noting that /gi, ''],
+    [/\bit is important to note that /gi, ''],
+    [/\bMoreover, /g, ''],
+    [/\bFurthermore, /g, ''],
+    [/\bAdditionally, /g, ''],
+    [/\bleverag(e|es|ing)\b/gi, (m, end) => `us${end === 'ing' ? 'ing' : end === 'es' ? 'es' : 'e'}`],
+    [/\bseamless(ly)? /gi, ''],
+    [/\bunlock (their|your|its) full potential\b/gi, 'do more'],
+    [/\bnavigate the complexities of\b/gi, 'handle'],
+    [/\ba rich tapestry of\b/gi, 'many'],
+    [/\bdelve into\b/gi, 'look at'],
+  ];
+  const hits = (t) => STOCK.reduce((n, [re]) => n + (t.match(re)?.length ?? 0), 0);
+  const words = (t) => (t.match(/\S+/g) ?? []).length;
+  const scoreOf = (t) => Math.min(0.97, 0.12 + 0.28 * hits(t));
+  const labelOf = (ai) => (ai >= 0.7 ? 'ai' : ai >= 0.4 ? 'mixed' : 'human');
+  // Sentences that lost their opening word start with a capital again.
+  const cap = (t) => t.replace(/(^|[.!?]\s+)([a-z])/g, (m, before, c) => before + c.toUpperCase());
+
+  let free = window.P3N_MOCK_FREE ?? 10; // the dev harness can start it lower
+  function spend(key) {
+    if (key) return null;
+    if (free <= 0) throw new ApiError(429, 'free_limit', 'Free limit reached for this hour.', { retryAfter: 1800, free: 0, signupUrl: window.P3N_API.LINKS.signup });
+    return --free;
+  }
+
+  function detect(text) {
+    const ai = scoreOf(text);
+    const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => hits(s)).slice(0, 5)
+      .map((s) => ({ text: s, why: 'A stock phrase with no specific claim in it.' }));
+    return {
+      version: 'detect-v1.2 (mock)', ai, label: labelOf(ai),
+      verdict: ai >= 0.7 ? 'Generic filler phrases with no specific claim or example.' : ai >= 0.4 ? 'Some stock phrasing among specific statements.' : 'Specific, plain statements.',
+      confidence: { level: words(text) > 60 ? 'high' : 'medium', reason: `${words(text)} words.` },
+      sentences, examples: [],
+    };
+  }
+
+  // One paragraph in, one out, like the real humanize; short paragraphs come back as sent. The API ends a
+  // rewrite with "\n", and so does this, so Replace is tested against the same shape.
+  function humanize(text) {
+    const paras = text.split(/\n[ \t]*\n/);
+    const out = paras.map((p) => {
+      if (words(p) < 6) return p;
+      let r = p;
+      for (const [re, to] of STOCK) r = r.replace(re, to);
+      r = cap(r.replace(/\s{2,}/g, ' ').trim());
+      return r === p ? `${p.replace(/[.!?]?$/, '')}, put plainly.` : r;
+    }).join('\n\n');
+    const before = scoreOf(text);
+    const after = Math.min(0.12, scoreOf(out)) * 0.5;
+    return { version: 'humanize-v1.1 (mock)', model: 'mock', text: `${out}\n`, ai_before: before, ai_after: after, label_after: labelOf(after), passes: after < 0.4, invented_blocked: [] };
+  }
+
+  async function runSkill(skill, text, { key, signal } = {}) {
+    await sleep(skill === 'detect' ? 900 : 2200, signal);
+    const left = spend(key);
+    const output = skill === 'detect' ? detect(text) : humanize(text);
+    return { run: { id: `mock-${skill}`, skill, status: 'succeeded', cached: false, error: null, charged_usd: key ? '0.0021' : '0', output }, free: left };
+  }
+
+  // Any well-formed key works except one whose secret starts with "bad", which plays a revoked key.
+  async function me(key) {
+    await sleep(350);
+    if (!key || /^p3n_[0-9a-f]{12}_bad/.test(key)) throw new ApiError(401, 'unauthorized', 'Invalid API key.');
+    return { email: 'you@example.com', balance_usd: '4.20', key: { name: 'Mock key', prefix: key.slice(0, 16) } };
+  }
+
+  return { runSkill, me };
+})();
+</script>

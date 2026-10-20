@@ -1,0 +1,552 @@
+<script>
+// The sidebar. It calls the p3n API itself (api.html, or mock.html in mock mode) and asks Code.js, through
+// google.script.run, only to read the selection, to replace it, and to save or remove the API key.
+(() => {
+  const BOOT = window.P3N_BOOT || {};
+  const { ApiError, LINKS, MAX_CHARS } = window.P3N_API;
+  const api = BOOT.mock ? window.P3N_MOCK : window.P3N_API;
+
+  const $ = (s) => document.querySelector(s);
+  const els = {
+    text: $('#text'), count: $('#count'), check: $('#check'), rewrite: $('#rewrite'), grab: $('#grab'), hint: $('#hint'),
+    busy: $('#busy'), busyText: $('#busy-text'), cancel: $('#cancel'), result: $('#result'), quota: $('#quota'), account: $('#account'),
+    main: $('#main'), settings: $('#settings'), back: $('#back'), key: $('#key'), keyStatus: $('#key-status'), remove: $('#remove'), mock: $('#mock'),
+  };
+  // source: where the text came from in the document. docText is what the selection reads as now (Replace checks
+  // it before writing), sent is the text that went to the API. fromDoc: the box still shows the document's text.
+  const state = { key: BOOT.key || '', source: null, fromDoc: false, controller: null, reading: false, timer: null, free: null };
+
+  // Code.js through google.script.run, as a promise. Opened outside Docs there is no document to read.
+  const docs = !!window.google?.script?.run;
+  function server(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      if (!docs) return reject(new Error('Not in Google Docs.'));
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+    });
+  }
+  function serverTrouble(e) {
+    const m = String(e?.message || e);
+    if (/authori[sz]|permission|access denied/i.test(m)) {
+      return 'Docs didn\'t let p3n read the document. If you\'re signed in to more than one Google account, open the document in a window signed in to just one. Or reload the page and open p3n again.';
+    }
+    return 'p3n can\'t reach the document right now. Reload the page and open p3n again, or paste the text in the box.';
+  }
+
+  // Tiny DOM builder. Strings become text nodes, so API text is never parsed as HTML.
+  function h(tag, attrs = {}, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === false || v == null) continue;
+      if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (k === 'class') el.className = v;
+      else if (k === 'style') el.style.cssText = v;
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    el.append(...kids.flat().filter((k) => k !== null && k !== undefined && k !== false));
+    return el;
+  }
+
+  const pct = (x) => Math.round((x || 0) * 100);
+  const tone = (x) => (x >= 0.7 ? 'ai' : x >= 0.4 ? 'mid' : 'human');
+  const LABELS = { human: 'Likely human-written', ai: 'Likely AI-written', ai_edited: 'AI-written, then edited', humanized: 'AI-written, then humanized', mixed: 'Mixed: part human, part AI' };
+  const words = (t) => (t || '').trim().split(/\s+/).filter(Boolean).length;
+  const clip = (t, n = 200) => (t && t.length > n ? t.slice(0, n - 1) + '…' : t);
+  const limit = () => (state.key ? MAX_CHARS.key : MAX_CHARS.free);
+  const calm = matchMedia('(prefers-reduced-motion: reduce)');
+  const undoKey = () => (/Mac/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? 'Cmd+Z' : 'Ctrl+Z');
+
+  // ---- motion ------------------------------------------------------------------------------------
+
+  // The one moment that moves: the score runs from where the text was to where it is now (0 for a check, the
+  // score before for a rewrite), and the number and the bar take the colour of each band they pass through.
+  // The markup already holds the end state, so reduced motion or a dropped frame still shows the right result.
+  function runScore(root) {
+    const score = root.querySelector('[data-to]');
+    const num = score?.querySelector('.num');
+    if (!num) return;
+    const pctEl = score.querySelector('.pct');
+    const bar = root.querySelector('.meter i');
+    const from = Number(score.dataset.from);
+    const to = Number(score.dataset.to);
+    if (calm.matches || from === to) return;
+    const draw = (v, t = tone(v / 100)) => {
+      num.textContent = `${Math.round(v)}%`;
+      pctEl.classList.remove('t-ai', 't-mid', 't-human');
+      pctEl.classList.add(`t-${t}`);
+      if (bar) bar.className = `b-${t}`;
+    };
+    const scale = (v) => { if (bar) bar.style.transform = `scaleX(${Math.max(3, v) / Math.max(3, to)})`; };
+    const t0 = performance.now() + 120;
+    const ms = 800;
+    draw(from);
+    scale(from);
+    const step = (now) => {
+      if (!num.isConnected) return;
+      const p = Math.min(1, Math.max(0, (now - t0) / ms));
+      const v = from + (to - from) * (1 - (1 - p) ** 4);
+      if (p < 1) {
+        draw(v);
+        scale(v);
+        requestAnimationFrame(step);
+      } else {
+        draw(to, score.dataset.tone);
+        if (bar) bar.style.transform = '';
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // Result parts arrive in reading order.
+  function stagger(box) {
+    [...box.children].forEach((c, i) => c.style.setProperty('--i', i));
+    return box;
+  }
+
+  // Text arriving from the document lands in the box with a brief highlight.
+  function arrived() {
+    els.text.classList.remove('arrived');
+    void els.text.offsetWidth; // restart the animation
+    els.text.classList.add('arrived');
+  }
+
+  // A check mark that draws itself, for Copied and Replaced.
+  function checkMark() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    const path = document.createElementNS(ns, 'path');
+    for (const [k, v] of Object.entries({ viewBox: '0 0 16 16', class: 'tick', 'aria-hidden': 'true' })) svg.setAttribute(k, v);
+    for (const [k, v] of Object.entries({ d: 'M3 8.5l3.2 3L13 4.5', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })) path.setAttribute(k, v);
+    svg.append(path);
+    return svg;
+  }
+
+  // ---- input -------------------------------------------------------------------------------------
+
+  function refreshInput() {
+    const n = els.text.value.trim().length;
+    els.count.textContent = n ? `${n.toLocaleString()} / ${limit().toLocaleString()}` : '';
+    els.count.title = n ? `${n.toLocaleString()} of up to ${limit().toLocaleString()} characters` : '';
+    els.count.classList.toggle('t-ai', n > limit());
+    const busy = !!state.controller || state.reading;
+    // In Docs the buttons work with an empty box: they take the selection.
+    els.check.disabled = busy || (!n && !docs);
+    els.rewrite.disabled = busy || (!n && !docs);
+    els.grab.hidden = !docs;
+    els.grab.disabled = busy;
+  }
+
+  function hint(msg) {
+    els.hint.textContent = msg || '';
+    els.hint.hidden = !msg;
+  }
+
+  // Reads the selection into the box. Only reads the document; nothing is sent to p3n. `quiet`: no hint when
+  // nothing is selected; `background`: the controls stay as they are while it reads (the read on opening).
+  async function grab({ quiet = false, background = false } = {}) {
+    hint('');
+    if (!background) {
+      state.reading = true;
+      els.grab.textContent = 'Reading…';
+      refreshInput();
+    }
+    try {
+      const got = await server('getSelectedText');
+      if (!got?.text) {
+        if (!quiet) hint('Nothing is selected. Select text in the document first.');
+        return null;
+      }
+      // Opening read: if the user started typing or clicked Check meanwhile, that wins.
+      if (background && (els.text.value.trim() || state.controller || state.reading)) return null;
+      if (got.text !== els.text.value) {
+        els.text.value = got.text;
+        arrived();
+      }
+      state.source = { docText: got.text, sent: got.text, blocked: got.blocked };
+      state.fromDoc = true;
+      return got.text;
+    } catch (e) {
+      if (!quiet) hint(serverTrouble(e));
+      return null;
+    } finally {
+      if (!background) {
+        state.reading = false;
+        els.grab.textContent = 'Use selection';
+      }
+      refreshInput();
+    }
+  }
+
+  // Check and Rewrite take the document's selection when the box is empty or still shows text from the
+  // document, so a new selection is picked up without another click. Text typed or pasted in the box is used as is.
+  async function go(skill) {
+    let text = els.text.value;
+    if (docs && (!text.trim() || state.fromDoc)) {
+      setBusy('read');
+      const got = await grab({ quiet: !!text.trim() });
+      if (got) text = got;
+    }
+    if (text.trim()) start(skill, text);
+    else setBusy(null);
+  }
+
+  els.text.addEventListener('input', () => {
+    state.fromDoc = !!state.source && els.text.value === state.source.docText;
+    refreshInput();
+  });
+  els.text.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !els.check.disabled) { e.preventDefault(); go('detect'); }
+  });
+  els.check.addEventListener('click', () => go('detect'));
+  els.rewrite.addEventListener('click', () => go('humanize'));
+  els.grab.addEventListener('click', () => grab());
+  els.cancel.addEventListener('click', () => state.controller?.abort());
+
+  // ---- running a skill ---------------------------------------------------------------------------
+
+  async function start(skill, text, options) {
+    text = (text || '').trim();
+    if (!text) return;
+    state.controller?.abort();
+    if (text.length > limit()) {
+      setBusy(null);
+      return showError(new ApiError(422, 'too_long', state.key
+        ? `That's ${text.length.toLocaleString()} characters; the API takes up to ${MAX_CHARS.key.toLocaleString()}. Select less.`
+        : `That's ${text.length.toLocaleString()} characters. Without an API key p3n takes up to ${MAX_CHARS.free.toLocaleString()}. Select less, or add a key.`));
+    }
+    const controller = new AbortController();
+    state.controller = controller;
+    els.result.replaceChildren();
+    setBusy(skill);
+    refreshInput();
+    try {
+      const { run, free } = await api.runSkill(skill, text, { key: state.key, options, signal: controller.signal });
+      if (free != null) state.free = free;
+      render(run, text);
+    } catch (e) {
+      if (e.name !== 'AbortError') showError(e);
+      if (e.free != null) state.free = e.free;
+    } finally {
+      if (state.controller === controller) state.controller = null;
+      setBusy(null);
+      refreshInput();
+      refreshAccount();
+    }
+  }
+
+  function setBusy(what) {
+    clearInterval(state.timer);
+    els.busy.hidden = !what;
+    if (!what) return;
+    if (what === 'read') {
+      els.busyText.textContent = 'Reading the selection…';
+      els.cancel.hidden = true;
+      return;
+    }
+    els.cancel.hidden = false;
+    const t0 = Date.now();
+    const verb = what === 'detect' ? 'Checking' : 'Rewriting';
+    const tick = () => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      els.busyText.textContent = `${verb}… ${s} s` + (what === 'humanize' && s > 8 ? ' (a rewrite takes up to a minute)' : '');
+    };
+    tick();
+    state.timer = setInterval(tick, 1000);
+  }
+
+  // ---- results -----------------------------------------------------------------------------------
+
+  function render(run, text) {
+    const body = run.skill === 'detect' ? renderDetect(run.output) : run.skill === 'humanize' ? renderHumanize(run.output, text) : [h('div', { class: 'rewrite' }, run.output?.text ?? '')];
+    const meta = h('p', { class: 'small muted' }, `${run.output?.version ?? run.skill}${run.cached ? ' · from cache' : ''}${state.key && Number(run.charged_usd) ? ` · $${Number(run.charged_usd).toFixed(4)}` : ''}`);
+    const box = stagger(h('div', { class: 'result-in stack' }, body, meta));
+    els.result.replaceChildren(box);
+    runScore(box);
+  }
+
+  // The big number: animated for the eye, stated once for screen readers (the result is a live region).
+  const scoreNum = (p) => [h('span', { class: 'num', 'aria-hidden': 'true' }, `${p}%`), h('span', { class: 'sr' }, `${p}%`)];
+  const meter = (x, t) => h('div', { class: 'meter' }, h('i', { class: `b-${t}`, style: `width:${Math.max(3, pct(x))}%` }));
+
+  function renderDetect(o) {
+    const t = tone(o.ai);
+    const parts = [
+      h('div', { class: 'score', 'data-from': 0, 'data-to': pct(o.ai), 'data-tone': t },
+        h('p', { class: 'label' }, LABELS[o.label] ?? 'Unknown'),
+        h('p', { class: `pct t-${t}` }, scoreNum(pct(o.ai)), h('small', {}, 'likely AI'))),
+      meter(o.ai, t),
+    ];
+    if (o.verdict) parts.push(h('p', {}, o.verdict));
+    if (o.confidence?.level) parts.push(h('p', { class: 'small muted' }, `Confidence ${o.confidence.level}: ${o.confidence.reason ?? ''}`));
+    // The sidebar is narrow: the sentences come first, and a pattern hit is listed only if its sentence isn't already there.
+    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+    const shown = new Set((o.sentences ?? []).slice(0, 5).map((s) => norm(s.text)));
+    if (shown.size) {
+      parts.push(h('div', {}, h('h3', {}, 'Sentences that read as AI'),
+        h('ul', { class: 'quotes' }, o.sentences.slice(0, 5).map((s, j) => h('li', { class: 'hit', style: `--j:${j}` }, s.why ? h('span', { class: 'why' }, s.why) : null, h('q', {}, clip(s.text)))))));
+    }
+    const hits = (o.examples ?? []).filter((e) => !shown.has(norm(e.sentence))).slice(0, 6);
+    if (hits.length) {
+      parts.push(h('div', {}, h('h3', {}, 'Pattern hits'),
+        h('ul', { class: 'quotes' }, hits.map((e) => h('li', {},
+          h('span', { class: 'why' }, (e.rules ?? []).map((r) => String(r.name ?? '').replace(/\s*\(LLM\)$/, '')).join(' · ')),
+          h('q', {}, clip(e.sentence)))))));
+    }
+    parts.push(h('p', { class: 'small muted' }, 'A score is a probability, not proof. Read the sentences yourself before deciding anything about a person.'));
+    return parts;
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // The sidebar's frame may not be allowed the clipboard API.
+      const ta = h('textarea', { class: 'sr', 'aria-hidden': 'true' });
+      ta.value = text;
+      document.body.append(ta);
+      ta.select();
+      const done = document.execCommand('copy');
+      ta.remove();
+      return done;
+    }
+  }
+
+  const BLOCKED = {
+    table: 'The selection has a table in it',
+    picture: 'The selection has a picture or drawing in it',
+    equation: 'The selection has an equation in it',
+    footnote: 'The selection has a footnote in it',
+    chip: 'The selection has a smart chip in it (a person, date or link)',
+    other: 'The selection has more than plain text in it',
+  };
+
+  function renderHumanize(o, sent) {
+    const t = tone(o.ai_after);
+    // The rewrite ends with a line break; the sidebar shows it without, and Replace never adds a paragraph for it.
+    const rewrite = o.text.trim();
+    // Replace only when what was rewritten is what came from the document, not text typed or edited here.
+    const fromDoc = !!state.source && state.source.sent === sent;
+    const replaceable = fromDoc && !state.source.blocked;
+    const status = h('p', { class: 'small', hidden: true });
+    const copyBtn = h('button', { type: 'button', class: replaceable ? 'btn ghost' : 'btn accent' }, 'Copy');
+    copyBtn.addEventListener('click', async () => {
+      if (!(await copyText(rewrite))) return;
+      copyBtn.replaceChildren(checkMark(), 'Copied');
+      clearTimeout(copyBtn.reset);
+      copyBtn.reset = setTimeout(() => copyBtn.replaceChildren('Copy'), 1500);
+    });
+    const buttons = [];
+    if (replaceable) {
+      const rep = h('button', { type: 'button', class: 'btn accent' }, 'Replace selection');
+      rep.addEventListener('click', () => replaceInDocument(rewrite, rep, status));
+      buttons.push(rep);
+    }
+    buttons.push(copyBtn, h('button', { type: 'button', class: 'link small push', onclick: () => start('humanize', sent, { fresh: true }) }, 'Try another rewrite'));
+
+    const before = o.ai_before != null ? pct(o.ai_before) : pct(o.ai_after);
+    const parts = [
+      h('div', { class: 'score', 'data-from': before, 'data-to': pct(o.ai_after), 'data-tone': t },
+        h('div', {}, h('p', { class: 'label' }, o.passes ? 'No longer reads as AI' : 'Still reads as AI'),
+          h('p', { class: 'small muted' }, `AI Detection: ${LABELS[o.label_after] ?? 'unknown'}`)),
+        h('p', { class: `pct t-${t}` },
+          o.ai_before != null ? h('span', { class: 'from' }, `${before}% → `) : null,
+          scoreNum(pct(o.ai_after)), h('small', {}, 'AI'))),
+      meter(o.ai_after, t),
+      h('div', { class: 'rewrite' }, rewrite),
+      h('div', { class: 'row' }, buttons),
+      status,
+    ];
+    if (fromDoc && state.source.blocked) {
+      parts.push(h('p', { class: 'small muted' }, `${BLOCKED[state.source.blocked] ?? BLOCKED.other}, so p3n won't paste over it. Copy the rewrite and paste it where you want it.`));
+    }
+    if (words(o.text) / Math.max(1, words(sent)) < 0.6) {
+      parts.push(h('p', { class: 'note warn small' }, `Kept ${words(o.text)} of ${words(sent)} words. Most of this text was general statements with no facts in them, and those are what reads as AI. Add the specifics you meant (who, what, numbers) and run it again.`));
+    }
+    if (o.invented_blocked?.length) {
+      parts.push(h('p', { class: 'small muted' }, `Kept as sent where a rewrite added ${o.invented_blocked.join(', ')}, which the text does not have.`));
+    }
+    parts.push(h('p', { class: 'small muted' }, 'Humanize drops filler and general statements that carry no fact. Check that every claim you need is still there.'));
+    return parts;
+  }
+
+  async function replaceInDocument(text, button, status) {
+    const s = state.source;
+    const say = (msg, kind) => { status.textContent = msg; status.className = `note small ${kind}`; status.hidden = false; };
+    button.disabled = true;
+    button.textContent = 'Replacing…';
+    let r;
+    try {
+      r = await server('replaceSelection', s.docText, text);
+    } catch (e) {
+      r = { ok: false, reason: 'error', detail: serverTrouble(e) };
+    }
+    if (r?.ok) {
+      // The document now holds this rewrite; another rewrite of the same text can replace it in turn.
+      state.source = { ...s, docText: r.text };
+      button.replaceChildren(checkMark(), 'Replaced');
+      button.className = 'btn ok';
+      return say(`Replaced in the document and selected there. ${undoKey()} in the document undoes it.`, 'ok');
+    }
+    button.disabled = false;
+    button.textContent = 'Replace selection';
+    if (r?.reason === 'error') return say(r.detail, 'warn');
+    const why = {
+      changed: 'The selected text changed since p3n read it, so p3n left the document alone.',
+      gone: 'That text isn\'t selected any more, and p3n couldn\'t find it once in the document.',
+      locked: 'Docs didn\'t allow the edit. You may only have view or comment access.',
+      empty: 'The rewrite came back empty, so p3n left the document alone.',
+    }[r?.reason] ?? (BLOCKED[r?.reason] ? `${BLOCKED[r.reason]}, so p3n won't paste over it.` : 'p3n couldn\'t put the text back.');
+    say(`${why} Select the text again and click Use selection, or copy the rewrite and paste it.`, 'warn');
+  }
+
+  function showError(e) {
+    const kids = [];
+    const keyBtn = (label) => h('button', { type: 'button', class: 'btn ghost', onclick: () => openSettings() }, label);
+    const linkBtn = (label, href) => h('a', { class: 'btn accent', href, rel: 'noopener' }, label);
+    switch (e.type) {
+      case 'free_limit': {
+        const mins = e.retryAfter ? Math.max(1, Math.ceil(e.retryAfter / 60)) : null;
+        kids.push(h('p', {}, `The free checks for this hour are used up${mins ? `; more in about ${mins} min` : ''}.`),
+          h('p', { class: 'small' }, 'Sign up for free credit and an API key, then paste the key here to keep going.'),
+          h('div', { class: 'row' }, linkBtn('Sign up', e.signupUrl || LINKS.signup), keyBtn('Add an API key')));
+        break;
+      }
+      case 'insufficient_credit':
+        kids.push(h('p', {}, 'Your p3n balance is too low for this.'), h('div', { class: 'row' }, linkBtn('Top up', LINKS.billing)));
+        break;
+      case 'unauthorized':
+        kids.push(h('p', {}, 'p3n didn\'t accept your API key. It may have been revoked.'), h('div', { class: 'row' }, keyBtn('Change the key')));
+        break;
+      case 'rate_limited':
+        kids.push(h('p', {}, 'Too many requests at once. Wait a minute and try again.'));
+        break;
+      default:
+        kids.push(h('p', {}, e.message || 'Something went wrong.'));
+    }
+    els.result.replaceChildren(stagger(h('div', { class: 'note error result-in stack tight' }, kids)));
+  }
+
+  // ---- account / quota ---------------------------------------------------------------------------
+
+  async function refreshAccount() {
+    els.account.textContent = state.key ? 'API key' : 'Add API key';
+    if (!state.key) {
+      els.quota.textContent = state.free != null
+        ? `${state.free} free ${state.free === 1 ? 'call' : 'calls'} left this hour without a key.`
+        : 'Free without a key: 10 calls an hour, up to 5,000 characters each.';
+      return;
+    }
+    try {
+      const m = await api.me(state.key);
+      els.quota.textContent = `Balance $${Number(m.balance_usd).toFixed(2)} · key ${m.key?.name ?? m.key?.prefix ?? ''}`;
+    } catch (e) {
+      els.quota.textContent = e.type === 'unauthorized' ? 'Your API key wasn\'t accepted. Change it under API key.' : '';
+    }
+  }
+
+  // ---- settings: the API key, checked with p3n before it's saved ---------------------------------
+
+  // The settings view slides over the main one (View Transitions where the browser has them).
+  function swap(toSettings) {
+    const apply = () => {
+      els.main.hidden = toSettings;
+      els.settings.hidden = !toSettings;
+      els.quota.hidden = toSettings;
+      document.documentElement.dataset.view = toSettings ? 'settings' : 'main';
+    };
+    if (document.startViewTransition && !calm.matches) document.startViewTransition(apply);
+    else apply();
+  }
+
+  function openSettings() {
+    els.key.value = state.key;
+    say('');
+    swap(true);
+    requestAnimationFrame(() => els.key.focus());
+    if (state.key) checkAndSave(state.key);
+  }
+
+  function closeSettings() {
+    swap(false);
+    requestAnimationFrame(() => els.account.focus());
+    refreshInput();
+    refreshAccount();
+  }
+
+  els.account.addEventListener('click', openSettings);
+  els.back.addEventListener('click', closeSettings);
+  els.settings.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
+
+  function say(msg, kind = '') {
+    els.keyStatus.textContent = msg;
+    els.keyStatus.className = `note small ${kind}`;
+    els.keyStatus.hidden = !msg;
+    if (msg && !calm.matches) {
+      els.keyStatus.animate([{ opacity: 0, transform: 'translateY(4px)' }, {}], { duration: 200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    }
+  }
+
+  // Saves a key only if p3n accepts it, so a typo never replaces a good key. It goes to the user's own
+  // properties for this add-on (Code.js saveKey), not to the document.
+  let pending = 0;
+  async function checkAndSave(k) {
+    const mine = ++pending;
+    say('Checking the key…');
+    try {
+      const m = await api.me(k);
+      if (mine !== pending) return;
+      if (k !== state.key) {
+        try {
+          if (docs) await server('saveKey', k);
+        } catch {
+          return say('The key works, but Google didn\'t let p3n save it. Try again in a moment.', 'warn');
+        }
+        if (mine !== pending) return;
+        state.key = k;
+      }
+      say(`Saved. Signed in as ${m.email}, balance $${Number(m.balance_usd).toFixed(2)}.`, 'ok');
+    } catch (e) {
+      if (mine !== pending) return;
+      say(e.type === 'unauthorized' ? 'p3n doesn\'t accept this key, so it wasn\'t saved. Copy it again from the API keys page.' : e.message, 'error');
+    }
+  }
+
+  let debounce;
+  els.key.addEventListener('input', () => {
+    clearTimeout(debounce);
+    pending++;
+    const k = els.key.value.trim();
+    if (!k) return say('');
+    if (!/^p3n_[0-9a-f]{12}_[A-Za-z0-9]{32}$/.test(k)) return say('Keys look like p3n_ followed by two groups of letters and digits. Copy the whole key from the API keys page.', 'warn');
+    debounce = setTimeout(() => checkAndSave(k), 400);
+  });
+
+  els.remove.addEventListener('click', async () => {
+    pending++;
+    try {
+      if (docs) await server('removeKey');
+    } catch {
+      return say('Google didn\'t let p3n remove the key. Try again in a moment.', 'warn');
+    }
+    state.key = '';
+    els.key.value = '';
+    say('Key removed. p3n still works without one, with the free hourly limit.');
+  });
+
+  // ---- boot --------------------------------------------------------------------------------------
+
+  els.mock.hidden = !BOOT.mock;
+  document.documentElement.dataset.view = 'main';
+  refreshInput();
+  refreshAccount();
+  if (!docs) {
+    hint('Open p3n from Extensions in Google Docs to use your selection. You can paste text here meanwhile.');
+  } else if (BOOT.job) {
+    // Opened from Extensions → p3n → Check or Rewrite: run it on the selection.
+    go(BOOT.job);
+  } else {
+    // Opened with text selected: take it in, send nothing yet.
+    grab({ quiet: true, background: true });
+  }
+})();
+</script>

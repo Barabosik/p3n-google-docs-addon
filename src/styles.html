@@ -1,0 +1,177 @@
+<style>
+/* p3n colours, the same tokens as p3n.si and the browser extension. */
+:root {
+  --paper: #fbfaf7;
+  --ink: #16130f;
+  --muted: #6b645a;
+  --tint: #f5f1ea;
+  --rule: #e6e1d8;
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
+  --accent-ink: #9a3412;
+  --amber: #b45309;
+  --amber-bar: #f59e0b;
+  --green: #047857;
+  --green-bar: #059669;
+  --radius: 8px;
+  --highlight: #fcd9c4;
+  /* Motion: enter with ease-out, travel with ease-in-out, never bounce. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
+  --t-press: 140ms;
+  --t-hover: 180ms;
+  --t-ui: 240ms;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+html { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; min-height: 100vh;
+}
+::selection { background: var(--highlight); color: var(--ink); }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+p { margin: 0; }
+code { font-size: 12.5px; }
+
+.small { font-size: 13px; line-height: 1.45; }
+.muted { color: var(--muted); }
+.strong { font-weight: 600; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.push { margin-left: auto; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.stack.tight { gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 0; border-radius: var(--radius); padding: 8px 13px;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+  transition: transform var(--t-press) var(--ease-out), background-color var(--t-hover) ease, color var(--t-hover) ease;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.accent { background: var(--accent); color: #fff; }
+.btn.ink { background: var(--ink); color: var(--paper); }
+.btn.ghost { background: var(--tint); color: var(--ink); }
+.btn.ok, .btn.ok:disabled { background: var(--green); color: #fff; opacity: 1; cursor: default; }
+.btn .tick { width: 14px; height: 14px; flex: none; }
+.tick path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: tick 320ms var(--ease-out) 60ms forwards; }
+@keyframes tick { to { stroke-dashoffset: 0; } }
+@media (hover: hover) {
+  .btn.accent:not(:disabled):hover { background: var(--accent-hover); }
+  .btn.ink:not(:disabled):hover { background: #000; }
+  .btn.ghost:not(:disabled):hover { background: var(--rule); }
+  .link:not(:disabled):hover { color: var(--accent-hover); }
+}
+.link {
+  background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+  color: var(--accent-ink); text-decoration: underline; text-underline-offset: 2px;
+  transition: color var(--t-hover) ease, opacity var(--t-hover) ease;
+}
+.link:disabled { opacity: .55; cursor: default; text-decoration: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+textarea, input[type="text"], input[type="password"] {
+  width: 100%; border: 0; border-radius: var(--radius); background: var(--tint);
+  color: var(--ink); font: inherit; padding: 10px 12px; caret-color: var(--accent);
+}
+textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
+textarea::placeholder, input::placeholder { color: var(--muted); }
+
+.note { border-radius: var(--radius); padding: 10px 12px; background: var(--tint); }
+.note.warn { background: #fef3c7; color: #78350f; }
+.note.error { background: #fde8e1; color: #7c2d12; }
+.note.ok { background: #e7f5ee; color: #065f46; }
+
+/* ---- layout: Docs gives the sidebar 300px ---- */
+main { flex: 1; padding: 0 14px 16px; display: flex; flex-direction: column; gap: 18px; }
+header.bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; }
+.brand { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); text-decoration: none; }
+.wordmark { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.wordmark span { color: var(--accent); }
+.badge { font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 999px; background: #fef3c7; color: #78350f; }
+
+.input { display: flex; flex-direction: column; gap: 8px; }
+.input .actions .btn { flex: 1; }
+
+/* Busy: shows only after a beat, so a quick answer doesn't flash it. */
+.busy { display: flex; flex-direction: column; gap: 8px; animation: appear var(--t-ui) var(--ease-out) 150ms both; }
+.progress { height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 40%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--accent) 70%); animation: slide 1.4s var(--ease-in-out) infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes appear { from { opacity: 0; } }
+
+/* Text arriving from the document lands in the box with a brief highlight. */
+textarea.arrived { animation: arrive 900ms var(--ease-out); }
+@keyframes arrive { from { background-color: var(--highlight); } }
+
+/* The result: parts arrive in reading order (--i is set in app.html), the score runs, flagged sentences get
+   highlighted like a pen stroke, and a rewrite wipes in. */
+#result:empty { display: none; }
+.result-in > * { animation: rise var(--t-ui) var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 6) * 50ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.rewrite {
+  -webkit-mask: linear-gradient(180deg, #000 40%, transparent 60%) 0 100% / 100% 260% no-repeat;
+  mask: linear-gradient(180deg, #000 40%, transparent 60%) 0 100% / 100% 260% no-repeat;
+  animation: wipe 650ms var(--ease-out) 100ms both;
+}
+@keyframes wipe { from { -webkit-mask-position: 0 100%; mask-position: 0 100%; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+.quotes li.hit q { background: linear-gradient(var(--highlight), var(--highlight)) no-repeat 0 0 / 0% 100%; animation: sweep 600ms var(--ease-out) both; animation-delay: calc(250ms + min(var(--j, 0), 4) * 140ms); }
+@keyframes sweep { to { background-size: 100% 100%; } }
+
+.score { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.score .label { font-size: 18px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+.score .pct { font-size: 34px; font-weight: 700; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color var(--t-hover) ease; }
+.score .pct small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 4px; }
+.score .pct .from { font-size: 18px; color: var(--muted); font-weight: 600; }
+.meter { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+.meter i { display: block; height: 100%; transform-origin: left; transition: background-color var(--t-hover) ease; }
+
+.t-ai { color: var(--accent); } .b-ai { background: var(--accent); }
+.t-mid { color: var(--amber); } .b-mid { background: var(--amber-bar); }
+.t-human { color: var(--green); } .b-human { background: var(--green-bar); }
+
+h3 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.quotes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.quotes li { padding: 8px 10px; border-radius: var(--radius); background: var(--tint); font-size: 13.5px; }
+.quotes q { padding: 1px 0; font-style: italic; }
+.quotes .why { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+
+.rewrite { white-space: pre-wrap; background: var(--tint); border-radius: var(--radius); padding: 12px; font-size: 14px; line-height: 1.6; }
+
+footer#quota { padding: 10px 14px 14px; }
+footer#quota:empty { display: none; }
+
+/* ---- settings: the API key, over the main view ---- */
+.settings { flex: 1; padding: 2px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.settings h2 { font-size: 17px; }
+.settings h2:focus { outline: none; }
+.settings .sub { font-size: 15px; margin-top: 14px; }
+
+/* Switching views: the new one slides in from the side it belongs on. */
+::view-transition-old(root) { animation: 160ms ease both fade-out; }
+::view-transition-new(root) { animation: 260ms var(--ease-out) both slide-in; }
+:root[data-view="main"]::view-transition-new(root) { animation-name: slide-back; }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(14px); } }
+@keyframes slide-back { from { opacity: 0; transform: translateX(-14px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress i { animation: none; width: 100%; background: var(--accent); opacity: .5; }
+  .result-in > * { animation: appear 150ms ease both; }
+  .rewrite { -webkit-mask: none; mask: none; animation: none; }
+  .quotes li.hit q { animation: none; background-size: 100% 100%; }
+  .tick path { animation: none; stroke-dashoffset: 0; }
+  textarea.arrived { animation: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+</style>

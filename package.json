@@ -1,0 +1,18 @@
+{
+  "name": "p3n-gdocs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "p3n for Google Docs: check selected text for AI and rewrite it so it doesn't read as AI, in a sidebar. The add-on is src/; the rest is dev tooling.",
+  "scripts": {
+    "harness": "node dev/harness.mjs",
+    "test": "node --test dev/code.test.mjs",
+    "e2e": "node dev/e2e.mjs",
+    "push": "clasp push",
+    "open": "clasp open-script"
+  },
+  "devDependencies": {
+    "@google/clasp": "3.4.1",
+    "puppeteer-core": "25.12.0"
+  }
+}
