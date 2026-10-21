@@ -18,10 +18,10 @@ Google's rules that shape this copy:
 | Application icon 48×48 | `dev/icons/48.png` (96×96 left empty) |
 | Card banner 220×140 | `store/card-banner-220x140.png` (`python dev/banner.py`) |
 | Screenshots | `store/screenshot-1.png` (Check) and `store/screenshot-2.png` (a rewrite with Replace selection), 1280×800. Both come from the live test deployment on 2026-10-20, with the account picture painted out. Shot 2 was recaptured after the headline fix. |
-| Terms of service | https://barabosik.github.io/p3n-google-docs-addon/terms.html |
-| Privacy policy | https://barabosik.github.io/p3n-google-docs-addon/privacy.html |
+| Terms of service | https://nikita-andreiev.com/p3n-google-docs-addon/terms.html |
+| Privacy policy | https://nikita-andreiev.com/p3n-google-docs-addon/privacy.html |
 | Support | https://github.com/Barabosik/p3n-google-docs-addon/issues |
-| Help (Editor add-ons) | https://barabosik.github.io/p3n-google-docs-addon/ |
+| Help (Editor add-ons) | https://nikita-andreiev.com/p3n-google-docs-addon/ |
 | Report issue (Editor add-ons) | https://github.com/Barabosik/p3n-google-docs-addon/issues |
 | Post Install Tip (required) | In a Google Docs document, select some text, then open Extensions → p3n → Open p3n. |
 | Pricing | Free of charge with paid features: the add-on is free, and more than 10 calls an hour takes a paid p3n API key. |
@@ -45,7 +45,7 @@ You can also paste any text into the sidebar.
 
 Free to try: without an account you get 10 checks or rewrites an hour, up to 5,000 characters each. For more, create an API key at p3n.si and paste it into the sidebar.
 
-Privacy: the add-on can open only the document you use it in. It sends the text you chose to api.p3n.si only when you click Check for AI or Rewrite. It keeps no history, has no analytics and stores nothing in your document. Details: https://barabosik.github.io/p3n-google-docs-addon/privacy.html
+Privacy: the add-on can open only the document you use it in. It sends the text you chose to api.p3n.si only when you click Check for AI or Rewrite. It keeps no history, has no analytics and stores nothing in your document. Details: https://nikita-andreiev.com/p3n-google-docs-addon/privacy.html
 
 A score is a probability, not proof. Read a rewrite before you keep it.
 
@@ -63,10 +63,10 @@ Google Docs is a trademark of Google LLC.
 | App integration | Editor add-on → Docs add-on: the standalone script's **Script ID** (Apps Script → Project Settings → IDs) and the deployment's **version number** (Deploy → Manage deployments) |
 | OAuth scopes | `https://www.googleapis.com/auth/documents.currentonly`, `https://www.googleapis.com/auth/script.container.ui`. They must match `src/appsscript.json` and the consent screen's Data Access list exactly. The SDK form also lists `https://www.googleapis.com/auth/userinfo.email` and `https://www.googleapis.com/auth/userinfo.profile`, which it includes by default ("Email and profile scopes are included by default"). They can't be removed: on 2026-10-21 both rows were deleted and saved, and a reload brought them back. The add-on never uses them, and the privacy policy says so. |
 | Developer name | Nikita Andreiev |
-| Developer website | https://barabosik.github.io/p3n-google-docs-addon/ |
+| Developer website | https://nikita-andreiev.com/p3n-google-docs-addon/ |
 | Developer email | The publishing account's address (decided 2026-10-20; kept out of this repo). Google doesn't show it on the listing. |
 | Trader status | **Non-trader** (decided 2026-10-20, as on the Chrome Web Store). EU law (the Digital Services Act) requires this declaration for the EEA, and a non-trader gives no mailing address. |
-| Application website URL | https://barabosik.github.io/p3n-google-docs-addon/ (optional) |
+| Application website URL | https://nikita-andreiev.com/p3n-google-docs-addon/ (optional) |
 
 ## OAuth consent screen (Google Auth Platform)
 
@@ -75,10 +75,10 @@ Google Docs is a trademark of Google LLC.
 | App name | `p3n` |
 | User support email | The publishing account, or a group it manages |
 | App logo | Optional (`dev/icons/128.png`). A logo makes Google verify the branding, which can add days. |
-| Application home page | https://barabosik.github.io/p3n-google-docs-addon/ |
-| Privacy policy | https://barabosik.github.io/p3n-google-docs-addon/privacy.html |
-| Terms of service | https://barabosik.github.io/p3n-google-docs-addon/terms.html |
-| Authorized domain | `barabosik.github.io` (verified in Search Console by the same account; Google accepted it on 2026-10-20) |
+| Application home page | https://nikita-andreiev.com/p3n-google-docs-addon/ |
+| Privacy policy | https://nikita-andreiev.com/p3n-google-docs-addon/privacy.html |
+| Terms of service | https://nikita-andreiev.com/p3n-google-docs-addon/terms.html |
+| Authorized domain | `nikita-andreiev.com`: the user's own domain and the custom domain of the GitHub Pages site, verified in Search Console as a Domain property through a DNS TXT record (2026-10-21). `barabosik.github.io` was accepted on 2026-10-20, but Google's branding check wants a domain the developer owns. |
 | Audience | External, In production |
 | Developer contact | The publishing account's email |
 

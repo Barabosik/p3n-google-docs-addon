@@ -45,4 +45,4 @@ The p3n add-on's use and transfer to any other app of information received from 
 
 Questions about the add-on: [GitHub issues](https://github.com/Barabosik/p3n-google-docs-addon/issues). Questions about p3n: [p3n.si/contact](https://p3n.si/contact).
 
-Changes to this policy are published here with a new date. The same policy is at https://barabosik.github.io/p3n-google-docs-addon/privacy.html. Google Docs is a trademark of Google LLC.
+Changes to this policy are published here with a new date. The same policy is at https://nikita-andreiev.com/p3n-google-docs-addon/privacy.html. Google Docs is a trademark of Google LLC.

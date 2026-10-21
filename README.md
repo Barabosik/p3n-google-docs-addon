@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Google Workspace Marketplace (not listed yet) · <a href="https://barabosik.github.io/p3n-google-docs-addon/">Homepage</a> · <a href="https://p3n.si">p3n.si</a>
+  Google Workspace Marketplace (not listed yet) · <a href="https://nikita-andreiev.com/p3n-google-docs-addon/">Homepage</a> · <a href="https://p3n.si">p3n.si</a>
 </p>
 
 <p align="center">
