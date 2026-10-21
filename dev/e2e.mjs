@@ -168,6 +168,23 @@ try {
     await page.close();
   }
 
+  // ---- an answer missing what the sidebar shows: an error, not a script error or a 0% score ----
+  {
+    const { page, frame } = await open('?mock=1');
+    await frame.evaluate(() => {
+      const real = window.P3N_MOCK.runSkill;
+      window.P3N_MOCK.runSkill = async (skill, text, o) => { const r = await real(skill, text, o); delete r.run.output[skill === 'detect' ? 'ai' : 'text']; return r; };
+    });
+    for (const [button, what] of [['#check', 'score'], ['#rewrite', 'text']]) {
+      await frame.evaluate(() => { const t = document.querySelector('#text'); t.value = 'Moreover, this seamless tool unlocks a rich tapestry of value for every team.'; t.dispatchEvent(new Event('input')); });
+      await click(frame, button);
+      await frame.waitForFunction(() => document.querySelector('#result .note.error'), { timeout: 15000 }).catch(() => {});
+      const t = await frame.$eval('#result', (r) => r.innerText);
+      ok(`malformed: an answer with no ${what} says so`, /can't read/.test(t), t.slice(0, 100));
+    }
+    await page.close();
+  }
+
   // ---- typed text: no Replace, Copy instead ----
   {
     const { page, frame } = await open('?mock=1');

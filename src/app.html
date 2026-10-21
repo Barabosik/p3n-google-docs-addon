@@ -139,7 +139,7 @@
     try {
       const { run, free } = await api.runSkill(skill, text, { key: key(), options, signal: controller.signal });
       if (free != null) HOST.free.set(free);
-      render(run, text);
+      render(run, text, skill);
     } catch (e) {
       if (e.name !== 'AbortError') showError(e);
       if (e.free != null) HOST.free.set(e.free);
@@ -182,19 +182,24 @@
     other: 'The selection has more than plain text in it',
   };
 
-  function render(run, text) {
+  function render(run, text, skill) {
+    // An answer without what the sidebar shows is a failed run to the user, not a 0% score or a script error.
+    const o = run.output;
+    if ((skill === 'detect' && typeof o?.ai !== 'number') || (skill === 'humanize' && typeof o?.text !== 'string')) {
+      return showError(new ApiError(502, 'bad_output', "p3n sent an answer this version of the add-on can't read. Try again in a moment."));
+    }
     let body;
-    if (run.skill === 'detect') body = R.renderDetect(run.output);
-    else if (run.skill === 'humanize') {
+    if (skill === 'detect') body = R.renderDetect(o);
+    else if (skill === 'humanize') {
       // Replace only while what was rewritten is the document's text, not text typed or edited in the box.
       const fromDoc = state.source?.text === text;
-      body = R.renderHumanize(run.output, text, {
+      body = R.renderHumanize(o, text, {
         replace: fromDoc && state.source.editable ? { label: 'Replace selection', run: (rewrite, button, status) => replaceInDocument(text, rewrite, button, status) } : null,
         note: fromDoc && state.source.blocked ? `${BLOCKED[state.source.blocked] ?? BLOCKED.other}, so p3n won't paste over it. Copy the rewrite and paste it where you want it.` : null,
         copy: HOST.copy,
         retry: () => start('humanize', text, { fresh: true }),
       });
-    } else body = [h('div', { class: 'rewrite' }, run.output?.text ?? '')];
+    } else body = [h('div', { class: 'rewrite' }, o?.text ?? '')];
     els.result.replaceChildren(R.result(run, body, { key: key() }));
   }
 
