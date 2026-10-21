@@ -115,7 +115,7 @@ Later updates: `npm run push` (never `push:dev`, which adds mock mode), then **M
    - App visibility: **Public**. This can't be changed later.
    - Installation: **Individual + Admin install**.
    - App integration: **Editor add-on → Docs**, with the Script ID and version number.
-   - OAuth scopes: the same two scopes.
+   - OAuth scopes: the same two scopes. Delete the `userinfo.email` and `userinfo.profile` rows the form pre-fills.
    - Developer information and trader status.
 
    **Save draft**.
