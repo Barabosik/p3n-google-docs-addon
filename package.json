@@ -1,6 +1,6 @@
 {
   "name": "p3n-google-docs-addon",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "p3n for Google Docs: check selected text for AI and rewrite it so it doesn't read as AI, in a sidebar. The add-on is src/; the rest is dev tooling.",
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "harness": "node dev/harness.mjs",
-    "test": "node --test dev/code.test.mjs",
+    "test": "node --test dev/code.test.mjs dev/api.test.mjs",
     "e2e": "node dev/e2e.mjs",
     "push": "clasp push --force",
     "push:dev": "clasp push --force --ignore .claspignore.dev",

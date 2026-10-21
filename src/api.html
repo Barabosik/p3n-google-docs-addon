@@ -3,6 +3,10 @@
 // free, a few an hour per IP (the user's own IP here); a key from p3n.si/dashboard/keys goes in as a bearer token.
 // The same client as the browser extension's lib/api.js, as a plain script (Apps Script pages have no modules).
 window.P3N_API = (() => {
+  // This build's version: the script version's description (vX.Y.Z) and package.json say the same, and npm test
+  // checks package.json. Every call names this client (X-P3N-Client), for the user's usage page on p3n.si.
+  const VERSION = '0.1.2';
+  const CLIENT = `p3n-gdocs/${VERSION}`;
   const API = 'https://api.p3n.si';
   const SITE = 'https://p3n.si';
   const LINKS = {
@@ -26,7 +30,7 @@ window.P3N_API = (() => {
   const TYPE_BY_STATUS = { 401: 'unauthorized', 402: 'insufficient_credit', 403: 'forbidden', 404: 'not_found', 422: 'invalid_request', 429: 'rate_limited', 502: 'upstream_error' };
 
   async function call(path, { method = 'GET', body, key, signal } = {}) {
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: 'application/json', 'X-P3N-Client': CLIENT };
     if (body) headers['Content-Type'] = 'application/json';
     if (key) headers.Authorization = `Bearer ${key}`;
     let res;
@@ -80,6 +84,6 @@ window.P3N_API = (() => {
     return (await call('/v1/me', { key })).data;
   }
 
-  return { API, LINKS, MAX_CHARS, ApiError, runSkill, me, sleep };
+  return { API, CLIENT, LINKS, MAX_CHARS, ApiError, runSkill, me, sleep };
 })();
 </script>

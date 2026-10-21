@@ -12,7 +12,7 @@ An Apps Script **Editor add-on**: `src/` is what goes to Google, plain Apps Scri
 | `src/host.html` | The Docs adapter, the only sidebar code that knows it runs in Docs: the key (user properties via `Code.js`), the free count, `grabSelection()` → `{ text, editable, blocked }`, `replace(text)` → `{ ok, reason }`, `copy`. |
 | `src/app.html` | The controller: the text box, running a check or rewrite, Replace, the key screen. Reaches the document only through the adapter, and p3n only through the API client. |
 | `src/render.html` | Results and their motion: score count-up, highlighter sweep, rewrite wipe, check marks, error copy. |
-| `src/api.html` | The API client, the [browser extension's](https://github.com/Barabosik/p3n-chrome-extension) `lib/api.js` as a plain script: `POST /v1/detect` and `/v1/humanize`, polling `/v1/runs/{id}`, readable errors. |
+| `src/api.html` | The API client, the [browser extension's](https://github.com/Barabosik/p3n-chrome-extension) `lib/api.js` as a plain script: `POST /v1/detect` and `/v1/humanize`, polling `/v1/runs/{id}`, readable errors. Every call names the add-on as `p3n-gdocs/<version>` (`X-P3N-Client`), from the one `VERSION` constant. |
 | `src/mock.html` | Canned API answers for mock mode and the tests. |
 | `src/styles.html` | Additions to Google's CSS package for Editor add-ons (linked in `Sidebar.html`): p3n's logo, wordmark, score colours and motion, in Docs' 300px sidebar. |
 | `src/appsscript.json` | Manifest: V8 and the two scopes. |
@@ -24,8 +24,8 @@ Apps Script pages have no modules or separately served files, so each browser pa
 
 ```bash
 npm install
-npm test            # Code.js against a stand-in for DocumentApp (15 tests)
-npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (34 checks)
+npm test            # Code.js against a stand-in for DocumentApp, and api.html's request headers (17 tests)
+npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (36 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
 ```

@@ -107,7 +107,7 @@ The demo video and screenshots need the user's screen, so steps 2–6 are one si
 
 **Deploy → New deployment → ⚙ next to Select type → Add-on**. Description: `0.1.0` → **Deploy**. Then **Deploy → Manage deployments**: note the **version number**. Also note the **Script ID** from **Project Settings → IDs**. Neither is committed: the Script ID goes in the Marketplace SDK, nowhere else.
 
-Later updates: `npm run push` (never `push:dev`, which adds mock mode), then **Manage deployments → ✎ the active deployment → Version: New version → Deploy**, then enter the new version number in the SDK's App Configuration. Don't make a new deployment for an update.
+Later updates: bump `VERSION` in `src/api.html` and `version` in `package.json` (`npm test` checks they match), `npm run push` (never `push:dev`, which adds mock mode), then **Manage deployments → ✎ the active deployment → Version: New version → Deploy**, then enter the new version number in the SDK's App Configuration. Don't make a new deployment for an update.
 
 ## 8. Marketplace SDK: [user] clicks, values from listing.md
 
