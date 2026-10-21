@@ -12,7 +12,8 @@ Checked against Google's docs in October 2026; the links are at the end.
 **Status, 2026-10-20:**
 - Steps 1–6 are done. The Search Console domain is verified, the Cloud project exists, the consent screen is In production, and the standalone project is linked and test-deployed. The demo video is recorded, and the screenshots are in `store/`.
 - The demo video is on YouTube, Unlisted. Its link is in the team's notes, not here, because the video shows the publishing account. Next: steps 7–10. Decided: Public, non-trader, no reviewer key.
-- Step 7, 2026-10-21: script **version 2** (`v0.1.1`, release build of `128d15e`, the audit fixes) is on the same deployment as version 1 (`v0.1.0`), which stays. The SDK's script version field is **2**. The fixes don't change the views in the demo video or the screenshots.
+- Step 7, 2026-10-21: script **version 2** (`v0.1.1`, release build of `128d15e`, the audit fixes) is on the same deployment as version 1 (`v0.1.0`), which stays. The fixes don't change the views in the demo video or the screenshots.
+- 2026-10-21: script **version 3** (`v0.1.2`, release build of `4f5c672`: every API call sends `X-P3N-Client: p3n-gdocs/0.1.2`) is on the same deployment. Versions 1 and 2 stay. The SDK's script version field is **3**.
 - Project numbers, IDs and the client ID stay out of this repo.
 
 ## 0. Before starting
