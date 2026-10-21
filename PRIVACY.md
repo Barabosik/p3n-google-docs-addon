@@ -13,6 +13,8 @@ The add-on asks Google for two permissions:
 
 When you open the sidebar, it reads your current selection to show it in the text box. That text stays between Google Docs and the sidebar until you click a button. The add-on doesn't read your name, email address, contacts or Drive.
 
+The Google Workspace Marketplace adds Google's basic email and profile permissions (`userinfo.email`, `userinfo.profile`) to every listing by default. The add-on itself never requests, reads or stores your name or email address.
+
 ## What it sends, and where
 
 - **What.** The text in the sidebar's box (your selection, or text you typed), when you click Check for AI or Rewrite. If you added an API key, the key goes with it so p3n can bill your account.
