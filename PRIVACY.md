@@ -37,7 +37,7 @@ p3n's full policy is at [p3n.si/privacy](https://p3n.si/privacy).
 
 ## Google user data
 
-The p3n add-on's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Text from your document is used only to run the check or rewrite you asked for. It is never sold, used for advertising, or read by people, except where you ask for help with a specific problem or the law requires it.
+The p3n add-on's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Text from your document is used only to run the check or rewrite you asked for. p3n.si keeps it for up to 7 days, to return results and to look into a failure you report, then deletes it. People at p3n read it only when you ask for help with a run, to investigate abuse or security, or when the law requires it. It is never sold, never used for advertising and never used to train models.
 
 ## Contact
 
