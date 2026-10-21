@@ -150,6 +150,14 @@ test('reads a selection across paragraphs with blank lines between, soft breaks 
   assert.equal(got.blocked, null);
 });
 
+test('a tab between words goes over as a space, not glued together', async () => {
+  const p = para('Owner:	Maja');
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  assert.equal(c.getSelectedText().text, 'Owner: Maja');
+});
+
 test('replaces a word range in place, in the formatting most of it had, without a trailing paragraph', async () => {
   const p = para('Hello brave new world.');
   const t = p.children[0];

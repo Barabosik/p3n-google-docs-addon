@@ -82,8 +82,9 @@ const BLOCKERS = {
 };
 const blocker_ = (type) => BLOCKERS[String(type)] || 'other';
 
-const CONTROL = /[\u0000-\u0009\u000c\u000e-\u001f]/g;
-const clean_ = (raw) => String(raw).replace(/\r\n?|\u000b/g, '\n').replace(CONTROL, '').trim();
+const CONTROL = /[\u0000-\u0008\u000c\u000e-\u001f]/g;
+// A tab goes over as a space, so the words on either side of it stay apart.
+const clean_ = (raw) => String(raw).replace(/\r\n?|\u000b/g, '\n').replace(/\t/g, ' ').replace(CONTROL, '').trim();
 
 // The selection as targets, one per non-empty paragraph: the paragraph's Text element and the selected
 // offsets in it (inclusive), the raw selected text, and its plain form.
