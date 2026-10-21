@@ -53,7 +53,8 @@ window.P3N_HOST = (() => {
     // ('table', 'picture', 'equation', 'footnote', 'chip', 'other'). Reads only; nothing is sent to p3n.
     async grabSelection() {
       const got = await server('getSelectedText');
-      docText = got?.text || null;
+      // Nothing selected keeps the text taken in last, as the sidebar does: Replace can still find it once.
+      if (got?.text) docText = got.text;
       return { text: got?.text || '', editable: !!got?.text && !got.blocked, blocked: got?.blocked || null };
     },
 
