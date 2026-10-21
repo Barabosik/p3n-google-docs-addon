@@ -30,7 +30,7 @@ To stop all access, remove the add-on in Google Docs (Extensions → Add-ons →
 
 ## What the p3n service does with the text
 
-- It keeps the text for up to 7 days, to return results and debug failures, then deletes it.
+- It keeps the text for up to 7 days, to return results and to look into a failure you report, then deletes it.
 - It sends the text through OpenRouter to the AI model providers that run the check or rewrite.
 - It logs the time and IP address of each call. That's how the free limit works.
 - It doesn't sell data or use your text to train models.
