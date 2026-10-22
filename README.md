@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://nikita-andreiev.com/p3n-google-docs-addon/">Homepage</a> · <a href="https://p3n.si">p3n.si</a>
+  <a href="https://nikita-andreiev.com/p3n-google-docs-addon/">Homepage</a> · <a href="https://p3n.si">p3n.si</a> · <a href="https://nikita-andreiev.com/p3n/">All p3n apps</a>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 ## Free, or with a key
 
-You get 10 checks or rewrites an hour without an account, up to 5,000 characters each. For more, make an API key at [p3n.si](https://p3n.si/dashboard/keys) and paste it into the sidebar (Add API key).
+You get 10 checks or rewrites an hour without an account, up to 5,000 characters each. For more, [sign up at p3n.si](https://p3n.si/register) (you get free credit), make a key on the [API keys](https://p3n.si/dashboard/keys) page, and add it with **Add API key** in the sidebar.
 
 ## Privacy
 
@@ -43,6 +43,10 @@ You can run your own copy with [clasp](https://github.com/google/clasp): the ste
 
 - If you're signed in to several Google accounts and the document isn't on your default one, Google blocks the add-on from reading the document. Use a browser window with just that account.
 - Google's Docs apps for phones and tablets don't run add-ons.
+
+## Other p3n apps
+
+p3n also works in [Chrome and Firefox](https://nikita-andreiev.com/p3n/#browser), [Word and Excel](https://nikita-andreiev.com/p3n/#office), [VS Code](https://nikita-andreiev.com/p3n/#vscode), [Obsidian](https://nikita-andreiev.com/p3n/#obsidian) and [Sublime Text](https://nikita-andreiev.com/p3n/#sublime). Install steps for each are on [nikita-andreiev.com/p3n](https://nikita-andreiev.com/p3n/).
 
 ## Develop
 
