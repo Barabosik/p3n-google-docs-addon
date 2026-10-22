@@ -63,7 +63,7 @@ Google Docs is a trademark of Google LLC.
 | App integration | Editor add-on → Docs add-on: the standalone script's **Script ID** (Apps Script → Project Settings → IDs) and the deployment's **version number** (Deploy → Manage deployments) |
 | OAuth scopes | `https://www.googleapis.com/auth/documents.currentonly`, `https://www.googleapis.com/auth/script.container.ui`. They must match `src/appsscript.json` and the consent screen's Data Access list exactly. The SDK form also lists `https://www.googleapis.com/auth/userinfo.email` and `https://www.googleapis.com/auth/userinfo.profile`, which it includes by default ("Email and profile scopes are included by default"). They can't be removed: on 2026-10-21 both rows were deleted and saved, and a reload brought them back. The add-on never uses them, and the privacy policy says so. |
 | Developer name | Nikita Andreiev |
-| Developer website | https://nikita-andreiev.com/p3n-google-docs-addon/ |
+| Developer website | https://nikita-andreiev.com/ |
 | Developer email | The publishing account's address (decided 2026-10-20; kept out of this repo). Google doesn't show it on the listing. |
 | Trader status | **Non-trader** (decided 2026-10-20, as on the Chrome Web Store). EU law (the Digital Services Act) requires this declaration for the EEA, and a non-trader gives no mailing address. |
 | Application website URL | https://nikita-andreiev.com/p3n-google-docs-addon/ (optional) |
