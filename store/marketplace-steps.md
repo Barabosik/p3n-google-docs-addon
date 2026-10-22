@@ -82,7 +82,7 @@ A published add-on needs its own standard Cloud project. The default project App
    - Contact information: an email address.
    - Finish: tick the Google API Services User Data Policy box → **Create**.
 2. **Branding**: add the application home page, privacy policy and terms of service links. Under **Authorized domains**, add `nikita-andreiev.com`. Fill in the developer contact. Skip the logo unless the user wants it, since a logo means Google checks the branding first. **Save**.
-3. **Data Access → Add or remove scopes → Manually add scopes**: paste both scope URLs from listing.md → **Add to table → Update → Save**. The table marks `script.container.ui` as **sensitive** and `documents.currentonly` as non-sensitive, so step 9 needs the demo video.
+3. **Data Access → Add or remove scopes → Manually add scopes**: paste the four scope URLs from listing.md → **Add to table → Update → Save**. They must be identical to the manifest's and the SDK's. The table marks `script.container.ui` as **sensitive** and `documents.currentonly` as non-sensitive, so step 9 needs the demo video.
 4. **Audience → Publish app → Confirm**. The status becomes In production.
 
 ## 5. Standalone script: [us], after [user] signs in to clasp
@@ -122,7 +122,7 @@ Later updates: bump `VERSION` in `src/api.html` and `version` in `package.json` 
    - App visibility: **Public**. This can't be changed later.
    - Installation: **Individual + Admin install**.
    - App integration: **Editor add-on → Docs**, with the Script ID and version number.
-   - OAuth scopes: the same two scopes. The form also keeps `userinfo.email` and `userinfo.profile`, which it includes by default and won't let you remove. The privacy policy explains them.
+   - OAuth scopes: the same four as the manifest and Data Access. The form adds `userinfo.email` and `userinfo.profile` by default, and the other two go after them.
    - Developer information and trader status.
 
    **Save draft**.

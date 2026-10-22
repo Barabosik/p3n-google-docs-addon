@@ -24,7 +24,7 @@ Apps Script pages have no modules or separately served files, so each browser pa
 
 ```bash
 npm install
-npm test            # Code.js against a stand-in for DocumentApp, and api.html's request headers (17 tests)
+npm test            # Code.js against a stand-in for DocumentApp, and api.html's request headers, and the manifest's scopes against the listing (18 tests)
 npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (36 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
@@ -71,6 +71,7 @@ After a change: `npm run push:dev`, then reopen the sidebar.
 | --- | --- |
 | `documents.currentonly` | Reading the selection and replacing it, only in the document the add-on is open in. |
 | `script.container.ui` | The Extensions menu and the sidebar. |
+| `userinfo.email`, `userinfo.profile` | Nothing: the add-on never uses them. The Marketplace adds both to every listing, and Google rejects an add-on whose manifest, listing and consent screen don't list the same scopes. `npm test` checks the manifest against the listing. |
 
 **Replace** (`replaceSelection` in `src/Code.js`):
 

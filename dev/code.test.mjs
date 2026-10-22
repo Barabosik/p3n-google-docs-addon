@@ -326,3 +326,11 @@ test('npm run push leaves out dev.js and nothing else, npm run push:dev sends it
   assert.deepEqual(await pushed('.claspignore'), files.filter((f) => f !== 'dev.js'));
   assert.deepEqual(await pushed('.claspignore.dev'), files);
 });
+
+test('the manifest asks for exactly the scopes the listing gives the SDK and the consent screen', async () => {
+  // Google rejects an add-on whose manifest, Marketplace SDK and consent screen don't list identical scopes.
+  const { oauthScopes } = JSON.parse(await readFile(path.join(SRC, 'appsscript.json'), 'utf8'));
+  const row = (await readFile(path.join(ROOT, 'store', 'listing.md'), 'utf8')).split('\n').find((l) => l.startsWith('| OAuth scopes |'));
+  const listed = new Set([...row.matchAll(/`(https:\/\/www\.googleapis\.com\/auth\/[\w.]+)`/g)].map((m) => m[1]));
+  assert.deepEqual([...oauthScopes].sort(), [...listed].sort());
+});

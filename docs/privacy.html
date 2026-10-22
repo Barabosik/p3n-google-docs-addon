@@ -24,13 +24,13 @@
       <p class="lede">Effective 20 October 2026. p3n is an add-on for Google Docs™ published by Nikita Andreiev. It sends text to the p3n service only when you ask it to.</p>
 
       <h2>What it reads from Google</h2>
-      <p>The add-on asks Google for two permissions:</p>
+      <p>The add-on asks Google for four permissions:</p>
       <ul>
         <li><strong>The document you use it in</strong> (<code>documents.currentonly</code>). It reads the text you selected, and writes the rewrite in its place when you click Replace selection. It can't open any other document or file.</li>
         <li><strong>Its menu and sidebar</strong> (<code>script.container.ui</code>). That's how it shows its Extensions menu items and the sidebar.</li>
+        <li><strong>Your email address and basic profile</strong> (<code>userinfo.email</code>, <code>userinfo.profile</code>). The Google Workspace Marketplace adds these two to every listing, and Google wants an add-on, its listing and its consent screen to list the same permissions, so the add-on lists them too. It never uses them: it doesn't read or store your name or email address.</li>
       </ul>
       <p>When you open the sidebar, it reads your current selection to show it in the text box. That text stays between Google Docs and the sidebar until you click a button. The add-on doesn't read your name, email address, contacts or Drive.</p>
-      <p>The Google Workspace Marketplace adds Google's basic email and profile permissions (<code>userinfo.email</code>, <code>userinfo.profile</code>) to every listing by default. The add-on itself never requests, reads or stores your name or email address.</p>
 
       <h2>What it sends, and where</h2>
       <ul>
