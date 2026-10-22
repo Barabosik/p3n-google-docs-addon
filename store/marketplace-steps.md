@@ -147,7 +147,7 @@ Until it's verified, users see "Google hasn't verified this app", and at most 10
 
 ## 11. After approval: [us]
 
-- Put the Marketplace link on the homepage (`docs/index.html`, replacing "coming soon") and in the README.
+- Only now put the Marketplace link on the homepage (`docs/index.html`) and in the README. Never before approval: Google says links to an unapproved listing, unclickable links and "coming soon" text delay the OAuth review (rejection email, 2026-10-21).
 - Tag the release in git (`v0.1.0`).
 
 ## Sources

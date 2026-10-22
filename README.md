@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Google Workspace Marketplace (not listed yet) · <a href="https://nikita-andreiev.com/p3n-google-docs-addon/">Homepage</a> · <a href="https://p3n.si">p3n.si</a>
+  <a href="https://nikita-andreiev.com/p3n-google-docs-addon/">Homepage</a> · <a href="https://p3n.si">p3n.si</a>
 </p>
 
 <p align="center">
@@ -35,9 +35,9 @@ You get 10 checks or rewrites an hour without an account, up to 5,000 characters
 
 The add-on sends the text you chose to `api.p3n.si`, and only when you click Check or Rewrite. It can open only the document you use it in. It keeps no history, has no analytics, and never stores anything in your document. Your API key stays in your Google account's settings for this add-on. The details are in [PRIVACY.md](PRIVACY.md).
 
-## Try it before it's listed
+## Run your own copy
 
-Until the Marketplace listing is live, you can run your own copy with [clasp](https://github.com/google/clasp): the steps are in [CONTRIBUTING.md](CONTRIBUTING.md#try-it-in-google-docs).
+You can run your own copy with [clasp](https://github.com/google/clasp): the steps are in [CONTRIBUTING.md](CONTRIBUTING.md#try-it-in-google-docs).
 
 ## Known gaps
 

@@ -43,7 +43,6 @@ h2 { font-size: 20px; letter-spacing: -0.01em; margin: 36px 0 8px; }
 .btn.primary:hover { background: var(--accent-ink); color: #fff; }
 .btn.ghost { border: 1px solid var(--rule); color: var(--ink); background: #fff; }
 .btn.ghost:hover { border-color: var(--muted); color: var(--ink); }
-.btn[aria-disabled="true"] { background: var(--tint); color: var(--muted); pointer-events: none; }
 
 .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 8px 0 8px; }
 .shots img { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 12px; background: #fff; }
