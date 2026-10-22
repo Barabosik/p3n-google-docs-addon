@@ -5,7 +5,7 @@
 <h1 align="center">p3n for Google Docs</h1>
 
 <p align="center">
-  Select text in a Google Doc. See if it reads as AI-written, or rewrite it and put the new version in its place.
+  Select text in a Google Doc. See if it reads as AI-written, or rewrite it in place.
 </p>
 
 <p align="center">
