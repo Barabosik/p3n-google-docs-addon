@@ -25,13 +25,13 @@ Apps Script pages have no modules or separately served files, so each browser pa
 ```bash
 npm install
 npm test            # Code.js against a stand-in for DocumentApp, and api.html's request headers, and the manifest's scopes against the listing (18 tests)
-npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (36 checks)
+npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (39 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
 ```
 
 - `npm test` checks reading across paragraphs, soft line breaks, a word range replaced with the majority formatting, edge spaces, whole paragraphs, several paragraphs with an untouched heading, links, the refusals (edited text, tables, pictures), the find-once fallback and the key format.
-- `npm run e2e` runs the real sidebar next to a stand-in document: Check, Rewrite and Replace on one and on several paragraphs, the refusals, typed text, Copy, nothing selected, the menu's jobs, the free limit, the key screen, reduced motion and page errors. Captures go to `dev/out/`. Set `CHROME=` if Chrome isn't in the default Windows location.
+- `npm run e2e` runs the real sidebar next to a stand-in document: Check, Rewrite and Replace on one and on several paragraphs, the refusals, typed text, Copy, nothing selected, the menu's jobs, the free limit, the key screen, the footer's p3n.si link, reduced motion and page errors. Captures go to `dev/out/`. Set `CHROME=` if Chrome isn't in the default Windows location.
 - The harness tests the sidebar, not Docs. CI runs both suites on every push.
 
 ![The harness: the sidebar next to a stand-in document, after Replace](docs/harness-replaced.png)

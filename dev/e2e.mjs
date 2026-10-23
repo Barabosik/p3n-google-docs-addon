@@ -62,6 +62,18 @@ const buttonByText = (frame, text) => frame.evaluateHandle((t) => [...document.q
 const docText = (page, sel) => page.$eval(sel, (n) => n.textContent);
 // The visible blue ("action") buttons: Google's review allows one per view.
 const blue = (frame) => frame.$$eval('.action', (b) => b.filter((x) => x.offsetParent).map((x) => x.textContent.trim()).join(' | '));
+// The footer's link to p3n.si: opens the site in a new tab, is the link a screen reader names "p3n.si" (the arrow is
+// hidden from it), shows, and sits on one line inside the sidebar. Also returns the quota line next to it.
+const siteLink = async (frame) => frame.evaluate((named) => {
+  const a = document.querySelector('#foot a');
+  const box = a?.getBoundingClientRect();
+  return {
+    ok: !!a && a === named && a.getAttribute('href') === 'https://p3n.si/' && a.target === '_blank' && /\bnoopener\b/.test(a.rel)
+      && a.textContent === 'p3n.si ↗' && a.title === 'Open p3n.si in your browser' && !!a.offsetParent
+      && a.getClientRects().length === 1 && box.height < 20 && box.right <= innerWidth,
+    quota: document.querySelector('#quota').textContent,
+  };
+}, await frame.$('aria/p3n.si[role="link"]'));
 // The key screen slides in with a view transition: wait until it shows and its field has focus, or typing
 // lands in the hidden field (slow CI runners hit this).
 const openKeyScreen = async (frame) => {
@@ -74,10 +86,14 @@ try {
   {
     const { page, frame } = await open('?mock=1');
     ok('one blue action: Check for AI before a result', (await blue(frame)) === 'Check for AI', await blue(frame));
+    const link = await siteLink(frame);
+    ok('footer: p3n.si ↗ after the quota line, opens https://p3n.si/ in a new tab, read as "p3n.si"', link.ok && /^Free without a key/.test(link.quota), link.quota);
     await select(page, '#p1');
     await click(frame, '#check');
     await frame.waitForFunction(settled, { timeout: 10000 });
     ok('check: selection read and scored', (await frame.$eval('.score .label', (n) => n.textContent)) === 'Likely AI-written');
+    const linkAfter = await siteLink(frame);
+    ok('footer: the link stays when the free count updates', linkAfter.ok && /free calls left this hour/.test(linkAfter.quota), linkAfter.quota);
     ok('check: box shows the selection', (await frame.$eval('#text', (t) => t.value)).startsWith("In today's fast-paced world"));
     ok('check: flagged sentences listed', (await frame.$$('.quotes li.hit')).length >= 1);
     await new Promise((r) => setTimeout(r, 1200)); // let the highlighter sweep finish for the capture
@@ -249,6 +265,8 @@ try {
     await click(frame, '#back');
     await frame.waitForFunction(() => /Balance \$4\.20/.test(document.querySelector('#quota').textContent), { timeout: 5000 });
     ok('key: footer shows the balance', true);
+    const linkKey = await siteLink(frame);
+    ok('footer: the link stays with a key, next to the balance', linkKey.ok, linkKey.quota);
     await openKeyScreen(frame);
     await frame.$eval('#key', (k) => { k.value = ''; });
     await frame.type('#key', `p3n_0123456789ab_bad${'A'.repeat(29)}`);

@@ -12,7 +12,7 @@
   const $ = (s) => document.querySelector(s);
   const els = {
     text: $('#text'), count: $('#count'), check: $('#check'), rewrite: $('#rewrite'), grab: $('#grab'), hint: $('#hint'),
-    busy: $('#busy'), busyText: $('#busy-text'), cancel: $('#cancel'), result: $('#result'), quota: $('#quota'), account: $('#account'),
+    busy: $('#busy'), busyText: $('#busy-text'), cancel: $('#cancel'), result: $('#result'), foot: $('#foot'), quota: $('#quota'), account: $('#account'),
     main: $('#main'), settings: $('#settings'), back: $('#back'), key: $('#key'), keyStatus: $('#key-status'), remove: $('#remove'), mock: $('#mock'),
   };
   // source: the document text in the box ({ text, editable, blocked }), so Replace can put a rewrite back.
@@ -264,7 +264,7 @@
     const apply = () => {
       els.main.hidden = toSettings;
       els.settings.hidden = !toSettings;
-      els.quota.hidden = toSettings;
+      els.foot.hidden = toSettings;
       document.documentElement.dataset.view = toSettings ? 'settings' : 'main';
     };
     if (document.startViewTransition && !R.calm.matches) return document.startViewTransition(apply).updateCallbackDone.catch(() => {});

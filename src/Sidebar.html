@@ -62,7 +62,11 @@
     <p class="small">Your key is kept in your Google account's settings for this add-on, never in the document, so other people with access to the document can't see it and it doesn't travel with a copy.</p>
   </section>
 
-  <footer id="quota" class="small muted"></footer>
+  <!-- The quota line (set in app.html), then p3n's website. -->
+  <footer id="foot" class="foot small muted">
+    <span id="quota"></span>
+    <a href="https://p3n.si/" target="_blank" rel="noopener" class="link small" title="Open p3n.si in your browser">p3n.si<span aria-hidden="true"> ↗</span></a>
+  </footer>
 
   <script>window.P3N_BOOT = <?!= boot ?>;</script>
   <!-- Host-free parts (api, mock, render) first, then the Docs adapter, then the controller that joins them. -->
