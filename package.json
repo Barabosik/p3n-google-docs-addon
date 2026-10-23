@@ -11,7 +11,7 @@
   },
   "scripts": {
     "harness": "node dev/harness.mjs",
-    "test": "node --test dev/code.test.mjs dev/api.test.mjs",
+    "test": "node --test dev/code.test.mjs dev/api.test.mjs dev/marks.test.mjs",
     "e2e": "node dev/e2e.mjs",
     "push": "clasp push --force",
     "push:dev": "clasp push --force --ignore .claspignore.dev",

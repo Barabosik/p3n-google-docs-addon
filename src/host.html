@@ -66,6 +66,12 @@ window.P3N_HOST = (() => {
       return r || { ok: false, reason: 'error' };
     },
 
+    // A check's sentences highlighted in the document (Code.js writes a background colour and keeps what was
+    // there): `marks` are offsets in `text`, the text that was checked. `marks` at boot: highlights were left in it.
+    marks: !!BOOT.marks,
+    mark: (text, marks) => server('highlight', text, marks),
+    unmark: () => server('clearHighlights'),
+
     undoKey: () => (/Mac/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? 'Cmd+Z' : 'Ctrl+Z'),
 
     // The sidebar has its own key screen (app.html), as the Word pane does; the extension opens an options page.

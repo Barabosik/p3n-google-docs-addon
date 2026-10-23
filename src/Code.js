@@ -4,7 +4,8 @@
  *
  * The sidebar calls api.p3n.si itself, from the user's browser, so someone without a key spends their own
  * free hourly calls instead of sharing the ones Google's servers get. This file does only what needs the
- * document: read the selection, replace it, and keep the API key in the user's own properties.
+ * document: read the selection, replace it, highlight a check's sentences and take the highlights off again,
+ * and keep the API key in the user's own properties.
  *
  * @OnlyCurrentDoc
  */
@@ -39,6 +40,7 @@ function openSidebar_(job) {
     job: job,
     key: props.getProperty(PROP_KEY) || '',
     mock: typeof devMock_ === 'function' && devMock_(), // dev.js, which a release push leaves out
+    marks: hasHighlights_(), // highlights left in the document: the sidebar offers Clear highlights at once
   }).replace(/</g, '\\u003c');
   DocumentApp.getUi().showSidebar(page.evaluate().setTitle('p3n'));
 }
@@ -137,15 +139,17 @@ function read_(doc) {
 
   const texts = [];
   const targets = [];
+  let at = 0; // where the next text starts in the joined text, so highlight() can find a paragraph's part of it
+  const add = (t) => { texts.push(t); at += t.length + 2; };
   items.forEach((g) => {
-    if (g.texts) return g.texts.forEach((p) => texts.push(p));
+    if (g.texts) return g.texts.forEach(add);
     const raw = g.spans.map((sp) => sp.el.getText().substring(sp.s, sp.e + 1)).join('');
     const text = clean_(raw);
     if (g.other.length) blocked = blocked || blocker_(g.other[0]);
     if (!text) return;
     if (g.spans.length > 1) blocked = blocked || 'other';
-    texts.push(text);
-    targets.push({ span: g.spans[0], raw, text, para: g.para });
+    targets.push({ span: g.spans[0], spans: g.spans, raw, text, para: g.para, at });
+    add(text);
   });
   return { text: texts.join('\n\n'), targets, blocked };
 }
@@ -238,6 +242,8 @@ function write_(span, str) {
   if (!str) return null;
   const end = s + str.length - 1;
   if (Object.keys(style.attrs).length) el.setAttributes(s, end, style.attrs);
+  // New text takes on the background of the text it went in next to, a highlight included: not that.
+  if (style.unmark && !style.attrs[DocumentApp.Attribute.BACKGROUND_COLOR]) el.setBackgroundColor(s, end, null);
   el.setLinkUrl(s, end, style.link);
   return { el, s, e: end };
 }
@@ -245,19 +251,23 @@ function write_(span, str) {
 const STYLE_ATTRS = ['BOLD', 'ITALIC', 'UNDERLINE', 'STRIKETHROUGH', 'FONT_FAMILY', 'FONT_SIZE', 'FOREGROUND_COLOR', 'BACKGROUND_COLOR'];
 
 // For each character attribute, the value that covers the most selected characters. A link is kept only
-// if the whole selection was that one link, so a rewrite never turns plain words into a link.
+// if the whole selection was that one link, so a rewrite never turns plain words into a link, and a p3n
+// highlight never becomes the rewrite's own background.
 function styleOf_(el, s, e) {
   const starts = el.getTextAttributeIndices();
   const len = el.getText().length;
   const tally = {};
   const links = {};
+  let unmark = false;
   for (let i = 0; i < starts.length; i++) {
     const a = Math.max(starts[i], s);
     const b = Math.min((i + 1 < starts.length ? starts[i + 1] : len) - 1, e);
     if (a > b) continue;
     const at = el.getAttributes(a);
     STYLE_ATTRS.forEach((k) => {
-      const v = JSON.stringify(at[k] == null ? null : at[k]);
+      const mark = k === 'BACKGROUND_COLOR' && isMark_(at[k]);
+      unmark = unmark || mark;
+      const v = JSON.stringify(at[k] == null || mark ? null : at[k]);
       tally[k] = tally[k] || {};
       tally[k][v] = (tally[k][v] || 0) + (b - a + 1);
     });
@@ -271,7 +281,7 @@ function styleOf_(el, s, e) {
     if (value !== null) attrs[DocumentApp.Attribute[k]] = value;
   });
   const urls = Object.keys(links);
-  return { attrs, link: urls.length === 1 && urls[0] ? urls[0] : null };
+  return { attrs, link: urls.length === 1 && urls[0] ? urls[0] : null, unmark };
 }
 
 // A paragraph the rewrite emptied goes, unless it is the last one in its section (Docs keeps that one).
@@ -292,7 +302,8 @@ function findOnce_(doc, expected) {
   const e = hit.getEndOffsetInclusive();
   const raw = el.getText().substring(s, e + 1);
   const text = clean_(raw);
-  return { text, blocked: null, targets: [{ span: { el, s, e, len: el.getText().length }, raw, text, para: el.getParent() }] };
+  const span = { el, s, e, len: el.getText().length };
+  return { text, blocked: null, targets: [{ span, spans: [span], raw, text, para: el.getParent(), at: 0 }] };
 }
 
 // The body of the tab the user is on (documents with tabs), or the document's only body.
@@ -302,4 +313,186 @@ function body_(doc) {
     if (tab) return tab.asDocumentTab().getBody();
   } catch (e) { /* no tabs API: one body */ }
   return doc.getBody();
+}
+
+// ---- highlighting a check's sentences ------------------------------------------------------------
+// DocumentApp has no decoration that stays out of the document, so a highlight is a background colour
+// written into it, and taking it off puts back what was there. For each run of characters it colours,
+// highlight() keeps a named range, which Docs moves and stretches as the text around and inside it is
+// edited, and the run's background from before (null for none, as on most text). Those are kept in the
+// document's properties for this add-on, so they outlast the sidebar, and whoever opens p3n in the
+// document next can take the highlights off. Only range IDs and colours are kept there, no text.
+
+const PROP_MARKS = 'p3n.highlights';
+const MARK_NAME = 'p3n.highlight';
+// p3n's AI tint for the listed sentences, a lighter one for the pattern hits. Neither is in Docs' palette,
+// so text in exactly these colours is taken to be p3n's.
+const MARK_COLORS = { ai: '#fcd9c4', hit: '#fdeadf' };
+const MAX_RUNS = 150; // what fits in one property value (9 KB)
+
+const same_ = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
+const isMark_ = (c) => Object.keys(MARK_COLORS).some((k) => same_(c, MARK_COLORS[k]));
+
+function hasHighlights_() {
+  try { return !!PropertiesService.getDocumentProperties().getProperty(PROP_MARKS); } catch (e) { return false; }
+}
+
+// Highlights `marks` ([{ start, end, kind }]: offsets in `expected`, end exclusive, from marks.html) if the
+// selection still reads as `expected`, the text that was checked. Takes off any highlights left from before
+// first. { ok, marked }: the number of runs coloured. Or { ok: false, reason }.
+function highlight(expected, marks) {
+  clearHighlights();
+  const doc = DocumentApp.getActiveDocument();
+  let got = read_(doc);
+  if (got.text !== expected) got = findOnce_(doc, expected) || got;
+  if (got.text !== expected) return { ok: false, reason: got.text ? 'changed' : 'gone' };
+  const tab = tab_(doc);
+  const kinds = Object.keys(MARK_COLORS);
+  const saved = { tab: tab.id, colors: kinds.map((k) => MARK_COLORS[k]), runs: [] };
+  try {
+    (marks || []).forEach((m) => {
+      const k = Math.max(0, kinds.indexOf(m.kind));
+      pieces_(got.targets, Number(m.start), Number(m.end)).forEach((p) => runsOf_(p).forEach((r) => {
+        if (saved.runs.length >= MAX_RUNS) return;
+        const range = tab.at.newRange().addElement(r.el, r.s, r.e).build();
+        // Kept before the colour goes on: a run that didn't get it matches nothing on clear.
+        saved.runs.push([tab.at.addNamedRange(MARK_NAME, range).getId(), r.bg, k]);
+        r.el.setBackgroundColor(r.s, r.e, saved.colors[k]);
+      }));
+    });
+  } catch (e) {
+    return { ok: false, reason: 'locked', marked: saved.runs.length };
+  } finally {
+    if (saved.runs.length) PropertiesService.getDocumentProperties().setProperty(PROP_MARKS, JSON.stringify(saved));
+  }
+  return { ok: true, marked: saved.runs.length };
+}
+
+// Takes p3n's highlights off. Each run gets back the background it had, wherever it still has p3n's colour;
+// text typed inside a highlighted sentence took that colour and is inside the range, so it goes back too.
+// What isn't put back: a run whose background was changed since (it stays as the user made it), and text
+// that is no longer in its range (copied elsewhere). Text typed right before or after a highlight took its
+// colour but is outside the range: it goes back when it has p3n's exact colour. { ok, kept }: the stretches
+// left as they were because their background had changed.
+function clearHighlights() {
+  const props = PropertiesService.getDocumentProperties();
+  const raw = props.getProperty(PROP_MARKS);
+  if (!raw) return { ok: true, kept: 0 };
+  let saved;
+  try { saved = JSON.parse(raw); } catch (e) { saved = { runs: [] }; }
+  const doc = DocumentApp.getActiveDocument();
+  const tab = tabById_(doc, saved.tab);
+  const T = DocumentApp.ElementType;
+  const back = [];
+  let kept = 0;
+  (saved.runs || []).forEach(([id, bg, k]) => {
+    const mark = (saved.colors || [])[k];
+    const named = tab.getNamedRangeById(id);
+    if (!named) return; // all of its text was deleted
+    named.getRange().getRangeElements().forEach((re) => {
+      const el = re.getElement();
+      const text = el.getType() === T.TEXT ? el.asText() : (typeof el.editAsText === 'function' ? el.editAsText() : null);
+      const len = text ? text.getText().length : 0;
+      if (!len) return;
+      const s = re.isPartial() ? re.getStartOffset() : 0;
+      const e = re.isPartial() ? re.getEndOffsetInclusive() : len - 1;
+      eachRun_(text, s, e, (a, b, now) => {
+        if (same_(now, mark)) text.setBackgroundColor(a, b, bg); // null takes the background off
+        else kept++;
+      });
+      back.push({ text, s, e, bg, mark });
+    });
+    named.remove();
+  });
+  // Once every run is back, so text next to one highlight that belongs to another already has its own colour.
+  back.forEach((r) => { spill_(r.text, r.e + 1, 1, r.bg, r.mark); spill_(r.text, r.s - 1, -1, r.bg, r.mark); });
+  props.deleteProperty(PROP_MARKS);
+  return { ok: true, kept };
+}
+
+// Calls fn(a, b, background) for each stretch of s..e (inclusive) with its own formatting.
+function eachRun_(text, s, e, fn) {
+  const starts = text.getTextAttributeIndices();
+  const len = text.getText().length;
+  for (let i = 0; i < starts.length; i++) {
+    const a = Math.max(starts[i], s);
+    const b = Math.min((i + 1 < starts.length ? starts[i + 1] : len) - 1, e);
+    if (a <= b) fn(a, b, text.getBackgroundColor(a));
+  }
+}
+
+// A piece split where its background changes: { el, s, e, bg } with the background to put back on clear.
+// One already in p3n's exact colour (a stray highlight, pasted from another) counts as none.
+function runsOf_(p) {
+  const out = [];
+  eachRun_(p.el, p.s, p.e, (a, b, now) => {
+    const bg = now && !isMark_(now) ? now : null;
+    const last = out[out.length - 1];
+    if (last && last.bg === bg) last.e = b;
+    else out.push({ el: p.el, s: a, e: b, bg });
+  });
+  return out;
+}
+
+// Text right next to a highlight that has its exact colour, from `from` in direction `step`, gets `bg`.
+function spill_(text, from, step, bg, mark) {
+  const len = text.getText().length;
+  let k = from;
+  while (k >= 0 && k < len && same_(text.getBackgroundColor(k), mark)) k += step;
+  if (k !== from) text.setBackgroundColor(Math.min(from, k - step), Math.max(from, k - step), bg);
+}
+
+// The document text behind start..end (end exclusive) of read_()'s joined text: { el, s, e } per Text
+// element, offsets inclusive, over a paragraph break when a sentence runs across one.
+function pieces_(targets, start, end) {
+  const out = [];
+  targets.forEach((t) => {
+    const a = Math.max(start, t.at) - t.at;
+    const b = Math.min(end, t.at + t.text.length) - t.at;
+    if (a >= b) return;
+    const map = cleanMap_(t.raw);
+    const chars = []; // the paragraph's selected characters, as raw has them
+    t.spans.forEach((sp) => { for (let k = sp.s; k <= sp.e; k++) chars.push({ el: sp.el, off: k }); });
+    for (let i = a; i < b; i++) {
+      const c = chars[map[i]];
+      const last = out[out.length - 1];
+      if (last && last.el === c.el && last.e === c.off - 1) last.e = c.off;
+      else out.push({ el: c.el, s: c.off, e: c.off });
+    }
+  });
+  return out;
+}
+
+// clean_ as a map: where each character of clean_(raw) is in raw.
+function cleanMap_(raw) {
+  raw = String(raw);
+  let s = '';
+  const at = [];
+  for (let i = 0; i < raw.length; i++) {
+    let c = raw[i];
+    if (c === '\r' && raw[i + 1] === '\n') continue;
+    if (c === '\r' || c === '\u000b') c = '\n';
+    else if (c === '\t') c = ' ';
+    else if (/[\u0000-\u0008\u000c\u000e-\u001f]/.test(c)) continue;
+    s += c;
+    at.push(i);
+  }
+  const lead = s.length - s.trimStart().length;
+  return at.slice(lead, lead + s.trim().length);
+}
+
+// The tab the user is on and its ID (documents with tabs), or the document itself: where named ranges go.
+function tab_(doc) {
+  try {
+    const tab = doc.getActiveTab && doc.getActiveTab();
+    if (tab) return { id: tab.getId(), at: tab.asDocumentTab() };
+  } catch (e) { /* no tabs API */ }
+  return { id: '', at: doc };
+}
+
+function tabById_(doc, id) {
+  try {
+    if (id) return doc.getTab(id).asDocumentTab();
+  } catch (e) { /* that tab is gone, and its highlights with it */ }
+  return doc;
 }

@@ -8,6 +8,7 @@
 //   /?mock=1&free=0                 mock with the free hourly calls used up
 //   /?mock=1&job=detect&select=1    opened from the menu with paragraph 1 selected
 //   /?key=p3n_...                   start with an API key saved
+//   reopenSidebar() in the page     closes and opens the sidebar, as Extensions → p3n → Open p3n does
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -77,7 +78,7 @@ const PAGE = String.raw`<!doctype html>
     <p id="p1">In today's fast-paced world, it's worth noting that effective communication is more important than ever. Moreover, leveraging the right tools can help teams unlock their full potential and navigate the complexities of modern work.</p>
     <p id="p2">We shipped the <b>new billing page</b> on 14 March. Refunds now take two days instead of nine, and support tickets about invoices fell by a third.</p>
     <ul><li>Hire two support engineers</li><li>Move the status page off the old host</li></ul>
-    <p id="p3">Additionally, our seamless onboarding unlocks a rich tapestry of possibilities for teams of all sizes.</p>
+    <p id="p3">Additionally, our seamless onboarding unlocks a rich tapestry of possibilities for teams of all sizes. It’s not just a tool, it’s a new way to work.</p>
   </div></div>
   <aside><div class="title">p3n <span aria-hidden="true">&times;</span></div><iframe id="sidebar" title="p3n sidebar" src="/sidebar__QUERY__"></iframe></aside>
 <script>
@@ -133,8 +134,88 @@ const handlers = {
     sel.addRange(now);
     return { ok: true, text: p.map((x, i) => x === got.targets[i].text ? x : clean(x)).filter(Boolean).join('\n\n') };
   },
+  // Highlights as Code.js puts them in Docs: a background on the checked text's sentences, taken off again.
+  highlight(expected, marks) { return keepSelection(() => {
+    handlers.clearHighlights();
+    const got = read();
+    if (got.text !== expected) return { ok: false, reason: got.text ? 'changed' : 'gone' };
+    let at = 0;
+    const segs = [];
+    got.targets.forEach((t) => { t.at = at; t.lead = t.raw.length - t.raw.trimStart().length; at += t.text.length + 2; });
+    marks.forEach((m) => got.targets.forEach((t) => {
+      const a = Math.max(m.start, t.at) - t.at;
+      const b = Math.min(m.end, t.at + t.text.length) - t.at;
+      if (a < b) segs.push(...segments(t, t.lead + a, t.lead + b, m.kind));
+    }));
+    // From the end of the document back, so splitting a text node leaves the offsets before it as they were.
+    const order = [...textNodes()];
+    segs.sort((x, y) => order.indexOf(y.node) - order.indexOf(x.node) || y.s - x.s).forEach(({ node, s, e, kind }) => {
+      const mid = node.splitText(s);
+      mid.splitText(e - s);
+      const span = document.createElement('span');
+      span.className = 'p3n-mark';
+      span.dataset.kind = kind;
+      span.style.background = MARK[kind];
+      mid.replaceWith(span);
+      span.append(mid);
+    });
+    return { ok: true, marked: segs.length };
+  }); },
+  clearHighlights() { return keepSelection(() => {
+    doc.querySelectorAll('.p3n-mark').forEach((m) => m.replaceWith(...m.childNodes));
+    doc.normalize();
+    return { ok: true, kept: 0 };
+  }); },
   saveKey(k) { if (!/^p3n_[0-9a-f]{12}_[A-Za-z0-9]{32}$/.test(k)) throw new Error('That is not a p3n API key.'); state.key = k; return true; },
   removeKey() { state.key = ''; return true; },
+};
+
+const MARK = { ai: '#fcd9c4', hit: '#fdeadf' }; // Code.js's MARK_COLORS
+const textNodes = () => { const w = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT); const out = []; for (let n = w.nextNode(); n; n = w.nextNode()) out.push(n); return out; };
+// Characters a..b (end exclusive) of a target's selected text, as { node, s, e } per text node.
+function segments(t, a, b, kind) {
+  const out = [];
+  let pos = 0;
+  for (const node of textNodes()) {
+    if (!t.block.contains(node) || !t.range.intersectsNode(node)) continue;
+    const s = node === t.range.startContainer ? t.range.startOffset : 0;
+    const e = node === t.range.endContainer ? t.range.endOffset : node.length;
+    const from = Math.max(a, pos);
+    const to = Math.min(b, pos + e - s);
+    if (from < to) out.push({ node, s: s + from - pos, e: s + to - pos, kind });
+    pos += e - s;
+  }
+  return out;
+}
+
+// Runs f and puts the selection back where it was, by character: wrapping and unwrapping text nodes moves a
+// browser's selection, while in Docs a background colour leaves it as it is.
+function keepSelection(f) {
+  const sel = getSelection();
+  const r = sel.rangeCount && doc.contains(sel.getRangeAt(0).commonAncestorContainer) ? sel.getRangeAt(0) : null;
+  const charAt = (node, off) => { const x = document.createRange(); x.setStart(doc, 0); x.setEnd(node, off); return x.toString().length; };
+  const kept = r && [charAt(r.startContainer, r.startOffset), charAt(r.endContainer, r.endOffset)];
+  const out = f();
+  if (kept) {
+    // A start on the edge between two text nodes goes in the later one, an end in the earlier one.
+    const point = (k, later) => {
+      for (const n of textNodes()) { if (k < n.length || (k === n.length && !later)) return [n, k]; k -= n.length; }
+      return [doc, doc.childNodes.length];
+    };
+    const n = document.createRange();
+    n.setStart(...point(kept[0], true));
+    n.setEnd(...point(kept[1], false));
+    sel.removeAllRanges();
+    sel.addRange(n);
+  }
+  return out;
+}
+
+// Closing the sidebar and opening it again: it boots knowing whether highlights were left, as openSidebar_ does.
+window.reopenSidebar = () => {
+  const q = new URLSearchParams(location.search);
+  if (doc.querySelector('.p3n-mark')) q.set('marks', '1');
+  document.querySelector('#sidebar').src = '/sidebar?' + q;
 };
 
 // Apps Script answers in a few hundred milliseconds; so does this.
@@ -162,7 +243,7 @@ export async function startHarness(port = 0) {
       return res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(PAGE.replace('__QUERY__', url.search));
     }
     if (url.pathname === '/sidebar') {
-      const boot = { job: q.get('job'), key: q.get('key') || '', mock: q.has('mock') };
+      const boot = { job: q.get('job'), key: q.get('key') || '', mock: q.has('mock'), marks: q.has('marks') };
       return res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(await sidebarHtml(boot, { free: q.get('free') }));
     }
     if (url.pathname === '/favicon.ico') return res.writeHead(204).end();

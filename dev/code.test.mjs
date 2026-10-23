@@ -13,7 +13,7 @@ const ATTRS = ['BOLD', 'ITALIC', 'UNDERLINE', 'STRIKETHROUGH', 'FONT_FAMILY', 'F
 const ET = Object.fromEntries(['TEXT', 'PARAGRAPH', 'LIST_ITEM', 'TABLE', 'INLINE_IMAGE', 'BODY_SECTION'].map((k) => [k, k]));
 
 class Text {
-  constructor(text, attrs = {}) { this.text = text; this.at = [...text].map(() => ({ ...attrs })); this.parent = null; this.writes = 0; }
+  constructor(text, attrs = {}) { this.text = text; this.at = [...text].map(() => ({ ...attrs })); this.parent = null; this.writes = 0; this.ranges = []; }
   getType() { return ET.TEXT; }
   asText() { return this; }
   getParent() { return this.parent; }
@@ -24,6 +24,10 @@ class Text {
     const like = { ...(this.at[off - 1] ?? this.at[0] ?? {}) };
     this.text = this.text.slice(0, off) + s + this.text.slice(off);
     this.at.splice(off, 0, ...[...s].map(() => ({ ...like })));
+    // Named ranges follow: text typed inside one stretches it, text typed at or before its start moves it.
+    for (const r of this.ranges) {
+      if (off <= r.s) { r.s += s.length; r.e += s.length; } else if (off <= r.e) r.e += s.length;
+    }
     this.writes++;
     return this;
   }
@@ -32,6 +36,9 @@ class Text {
     assert.ok(s >= 0 && e < this.text.length && s <= e, `deleteText ${s}..${e} out of range`);
     this.text = this.text.slice(0, s) + this.text.slice(e + 1);
     this.at.splice(s, e - s + 1);
+    const n = e - s + 1;
+    const shift = (p, edge) => (p < s ? p : p > e ? p - n : edge);
+    for (const r of this.ranges) { r.s = shift(r.s, s); r.e = shift(r.e, s - 1); if (r.e < r.s) r.gone = true; }
     this.writes++;
     return this;
   }
@@ -43,6 +50,9 @@ class Text {
   getAttributes(off) { return Object.fromEntries(ATTRS.map((k) => [k, this.at[off]?.[k] ?? null])); }
   setAttributes(s, e, attrs) { for (let i = s; i <= e; i++) Object.assign(this.at[i], attrs); return this; }
   setLinkUrl(s, e, url) { for (let i = s; i <= e; i++) this.at[i].LINK_URL = url; return this; }
+  getBackgroundColor(off) { return this.at[off]?.BACKGROUND_COLOR ?? null; }
+  setBackgroundColor(s, e, c) { assert.ok(s >= 0 && e < this.text.length && s <= e, `setBackgroundColor ${s}..${e} out of range`); for (let i = s; i <= e; i++) this.at[i].BACKGROUND_COLOR = c; return this; }
+  bgs() { return this.at.map((a) => a.BACKGROUND_COLOR ?? null); }
   attrAt(off, k) { return this.at[off]?.[k] ?? null; }
 }
 
@@ -74,6 +84,25 @@ function makeDoc(...paras) {
     getSelection: () => doc.selection && { getRangeElements: () => doc.selection },
     setSelection: (r) => { doc.selection = r.getRangeElements(); },
     newRange: () => { const els = []; const b = { addElement: (el, s, e) => { els.push(re(el, s, e)); return b; }, build: () => ({ getRangeElements: () => els }) }; return b; },
+    // Named ranges over one Text element each, which follow edits to it (Text.insertText, deleteText).
+    named: new Map(),
+    addNamedRange: (name, range) => {
+      const [r] = range.getRangeElements();
+      const el = r.getElement();
+      const id = `kix.${doc.named.size + 1}`;
+      const nr = { id, name, el, s: r.getStartOffset(), e: r.getEndOffsetInclusive() };
+      el.ranges.push(nr);
+      doc.named.set(id, nr);
+      return { getId: () => id };
+    },
+    getNamedRangeById: (id) => {
+      const nr = doc.named.get(id);
+      if (!nr || nr.gone) return null;
+      return {
+        getRange: () => ({ getRangeElements: () => [re(nr.el, nr.s, nr.e)] }),
+        remove: () => { doc.named.delete(id); nr.el.ranges.splice(nr.el.ranges.indexOf(nr), 1); },
+      };
+    },
   };
   // findText over the body's Text elements in order, continuing after `from`.
   body.findText = (pattern, from) => {
@@ -102,23 +131,22 @@ const SRC = path.join(ROOT, 'src');
 
 // Code.js, plus dev.js as in a dev push, with the user's properties and the sidebar stubbed. `shown` collects
 // the sidebars opened.
-async function load(doc, { dev = false, props = {} } = {}) {
+async function load(doc, { dev = false, props = {}, docProps = new Map() } = {}) {
   const read = (name) => readFile(path.join(SRC, name), 'utf8');
   const code = (await read('Code.js')) + (dev ? `\n${await read('dev.js')}` : '');
   const store = new Map(Object.entries(props));
+  const propsOf = (m) => ({ getProperty: (k) => m.get(k) ?? null, setProperty: (k, v) => m.set(k, v), deleteProperty: (k) => m.delete(k) });
   const shown = [];
   const ctx = vm.createContext({
     DocumentApp: {
       ElementType: ET, Attribute: Object.fromEntries(ATTRS.map((k) => [k, k])), getActiveDocument: () => doc,
       getUi: () => ({ showSidebar: (page) => shown.push(page) }),
     },
-    PropertiesService: {
-      getUserProperties: () => ({ getProperty: (k) => store.get(k) ?? null, setProperty: (k, v) => store.set(k, v), deleteProperty: (k) => store.delete(k) }),
-    },
+    PropertiesService: { getUserProperties: () => propsOf(store), getDocumentProperties: () => propsOf(docProps) },
     HtmlService: { createTemplateFromFile: () => { const t = { evaluate: () => ({ setTitle: () => t }) }; return t; } },
   });
-  const api = vm.runInContext(`${code}\n;({ getSelectedText, replaceSelection, blocksOf_, plan_, saveKey, showSidebar })`, ctx);
-  return Object.assign(api, { shown });
+  const api = vm.runInContext(`${code}\n;({ getSelectedText, replaceSelection, blocksOf_, plan_, saveKey, showSidebar, highlight, clearHighlights, clean_, cleanMap_ })`, ctx);
+  return Object.assign(api, { shown, docProps });
 }
 
 const textOf = (p) => p.children[0].text;
@@ -333,4 +361,142 @@ test('the manifest asks for exactly the scopes the listing gives the SDK and the
   const row = (await readFile(path.join(ROOT, 'store', 'listing.md'), 'utf8')).split('\n').find((l) => l.startsWith('| OAuth scopes |'));
   const listed = new Set([...row.matchAll(/`(https:\/\/www\.googleapis\.com\/auth\/[\w.]+)`/g)].map((m) => m[1]));
   assert.deepEqual([...oauthScopes].sort(), [...listed].sort());
+});
+
+// ---- highlights: a background on a check's sentences, and what was there put back ----
+
+const AI = '#fcd9c4';
+const HIT = '#fdeadf';
+const YELLOW = '#ffff00';
+// Offsets of `part` in `text`, end exclusive, as marks.html sends them.
+const markOf = (text, part, kind = 'ai', from = 0) => ({ start: text.indexOf(part, from), end: text.indexOf(part, from) + part.length, kind });
+const run = (t, from, to, v) => t.bgs().slice(from, to).every((x) => x === v);
+
+test('highlight colours the sentences, a pattern hit lighter and across a paragraph break; clear takes all of it off', async () => {
+  const p1 = para('Plain start. Moreover, it');
+  const p2 = para('unlocks potential. Fine end.');
+  const doc = makeDoc(p1, p2);
+  doc.selection = [re(p1), re(p2)];
+  const c = await load(doc);
+  const text = 'Plain start. Moreover, it\n\nunlocks potential. Fine end.';
+  assert.equal(c.getSelectedText().text, text);
+  const r = c.highlight(text, [markOf(text, 'Moreover, it\n\nunlocks potential.'), markOf(text, 'Fine end.', 'hit')]);
+  assert.equal(r.ok, true);
+  const [t1, t2] = [p1.children[0], p2.children[0]];
+  assert.ok(run(t1, 0, 13, null) && run(t1, 13, 25, AI));
+  assert.ok(run(t2, 0, 18, AI) && run(t2, 18, 19, null) && run(t2, 19, 28, HIT));
+  assert.ok(c.docProps.get('p3n.highlights'), 'what to put back is kept in the document properties');
+  assert.equal(c.clearHighlights().kept, 0);
+  assert.ok(run(t1, 0, t1.text.length, null) && run(t2, 0, t2.text.length, null));
+  assert.equal(c.docProps.size, 0);
+  assert.equal(doc.named.size, 0);
+});
+
+test('clear puts back the user\'s own background inside a sentence, and null stays null', async () => {
+  const t = new Text('Moreover, it unlocks potential.');
+  t.setBackgroundColor(13, 19, YELLOW); // "unlocks"
+  const p = new Container(ET.PARAGRAPH, [t]);
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  c.highlight(t.text, [{ start: 0, end: t.text.length, kind: 'ai' }]);
+  assert.ok(run(t, 0, t.text.length, AI));
+  c.clearHighlights();
+  assert.ok(run(t, 0, 13, null) && run(t, 13, 20, YELLOW) && run(t, 20, t.text.length, null));
+});
+
+test('a background the user changed after the highlight went on stays as they made it', async () => {
+  const p = para('Moreover, it unlocks potential.');
+  const t = p.children[0];
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  c.highlight(t.text, [{ start: 0, end: t.text.length, kind: 'ai' }]);
+  t.setBackgroundColor(0, 8, '#00ff00'); // "Moreover,"
+  assert.ok(c.clearHighlights().kept >= 1);
+  assert.ok(run(t, 0, 9, '#00ff00') && run(t, 9, t.text.length, null));
+});
+
+test('edits inside a highlight: typed text goes back with it, deleted text is fine, text typed right after too', async () => {
+  const t = new Text('Intro. Moreover, it unlocks potential. Later.');
+  t.setBackgroundColor(39, 44, YELLOW); // "Later." is the user's own yellow
+  const p = new Container(ET.PARAGRAPH, [t]);
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  c.highlight(t.text, [markOf(t.text, 'Moreover, it unlocks potential.')]);
+  t.insertText(20, 'really '); // inside: takes the highlight from the character before it
+  t.deleteText(7, 16); // "Moreover, " gone
+  t.insertText(t.text.indexOf('potential.') + 10, ' Truly'); // right after the sentence, outside its range
+  assert.equal(t.text, 'Intro. it really unlocks potential. Truly Later.');
+  assert.ok(t.bgs().some((x) => x === AI));
+  c.clearHighlights();
+  assert.ok(run(t, 0, t.text.indexOf('Later.'), null), 'no highlight colour left');
+  assert.ok(run(t, t.text.indexOf('Later.'), t.text.length, YELLOW), 'the user\'s yellow next to it untouched');
+});
+
+test('a highlight whose text was all deleted is skipped; the rest still goes back', async () => {
+  const p = para('One two. Three four.');
+  const t = p.children[0];
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  c.highlight(t.text, [markOf(t.text, 'One two.'), markOf(t.text, 'Three four.')]);
+  t.deleteText(0, 8); // "One two. "
+  c.clearHighlights();
+  assert.equal(t.text, 'Three four.');
+  assert.ok(run(t, 0, t.text.length, null));
+});
+
+test('only the selected text is highlighted, even where the same sentence is outside it', async () => {
+  const p = para('Great news. Great news.');
+  const t = p.children[0];
+  const doc = makeDoc(p);
+  doc.selection = [re(t, 12, 22)];
+  const c = await load(doc);
+  c.highlight('Great news.', [{ start: 0, end: 11, kind: 'ai' }]);
+  assert.ok(run(t, 0, 12, null) && run(t, 12, 23, AI));
+});
+
+test('no highlight when the selection no longer reads as the text checked', async () => {
+  const p = para('Someone edited this.');
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  assert.deepEqual({ ...c.highlight('The text that was checked.', [{ start: 0, end: 9, kind: 'ai' }]) }, { ok: false, reason: 'changed' });
+  assert.ok(run(p.children[0], 0, 20, null));
+  assert.equal(c.docProps.size, 0);
+});
+
+test('highlights outlast the sidebar: it opens with Clear highlights, and a later run can take them off', async () => {
+  const p = para('Moreover, it unlocks potential.');
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const docProps = new Map();
+  const boot = async (c) => { c.showSidebar(); return JSON.parse(c.shown.at(-1).boot).marks; };
+  const first = await load(doc, { docProps });
+  assert.equal(await boot(first), false);
+  first.highlight(p.getText(), [{ start: 0, end: 31, kind: 'ai' }]);
+  const later = await load(doc, { docProps }); // a new execution, as after the sidebar closed
+  assert.equal(await boot(later), true);
+  later.clearHighlights();
+  assert.ok(run(p.children[0], 0, 31, null));
+  assert.equal(await boot(later), false);
+});
+
+test('Replace never takes a highlight on as the rewrite\'s own background', async () => {
+  const p = para('Moreover, it unlocks potential.', { BACKGROUND_COLOR: AI });
+  const doc = makeDoc(p);
+  doc.selection = [re(p)];
+  const c = await load(doc);
+  assert.equal(c.replaceSelection('Moreover, it unlocks potential.', 'It helps.\n').ok, true);
+  assert.equal(textOf(p), 'It helps.');
+  assert.ok(run(p.children[0], 0, 9, null));
+});
+
+test('the offsets map back through what reading the selection cleans up', async () => {
+  const c = await load(makeDoc(para('x')));
+  const raw = ' \t a\r\nb\u0001c\td\u000be\r f  ';
+  const map = c.cleanMap_(raw);
+  assert.equal(map.map((i) => raw[i]).join('').replace(/\r|\u000b/g, '\n').replace(/\t/g, ' '), c.clean_(raw));
 });

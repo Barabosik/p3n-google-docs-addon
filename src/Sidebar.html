@@ -41,6 +41,12 @@
     </section>
 
     <section id="result" aria-live="polite"></section>
+
+    <!-- While a check's highlights are in the document (app.html). -->
+    <section id="marks" class="note small marks" hidden>
+      <p>The highlights are in the document, so anyone who can open it sees them until you click Clear highlights.</p>
+      <div class="row"><button type="button" id="unmark" class="btn">Clear highlights</button></div>
+    </section>
   </main>
 
   <section id="settings" class="settings" hidden aria-labelledby="settings-title">
@@ -69,9 +75,10 @@
   </footer>
 
   <script>window.P3N_BOOT = <?!= boot ?>;</script>
-  <!-- Host-free parts (api, mock, render) first, then the Docs adapter, then the controller that joins them. -->
+  <!-- Host-free parts (api, mock, marks, render) first, then the Docs adapter, then the controller that joins them. -->
   <?!= include_('api'); ?>
   <?!= include_('mock'); ?>
+  <?!= include_('marks'); ?>
   <?!= include_('render'); ?>
   <?!= include_('host'); ?>
   <?!= include_('app'); ?>

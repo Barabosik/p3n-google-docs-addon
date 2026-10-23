@@ -1,0 +1,82 @@
+<script>
+// Where the sentences a Check lists are in the text that was checked, so the host can highlight them. No host and no
+// DOM in here: the sidebar passes the offsets to the host (Code.js marks them in Docs), and npm test runs it as is.
+window.P3N_MARKS = (() => {
+  const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+
+  // What a check result lists (render.html shows the same): up to 5 sentences, then up to 6 pattern hits whose
+  // sentence isn't one of them.
+  function pick(o) {
+    const sentences = (o?.sentences ?? []).slice(0, 5);
+    const shown = new Set(sentences.map((s) => norm(s.text)));
+    const hits = (o?.examples ?? []).filter((e) => !shown.has(norm(e.sentence))).slice(0, 6);
+    return { sentences, hits };
+  }
+
+  const QUOTES = { '‘': "'", '’': "'", '‚': "'", '‛': "'", '“': '"', '”': '"', '„': '"', '‟': '"' };
+  const WORD = /[\p{L}\p{N}]/u;
+
+  // Text folded for comparing: curly quotes as straight, whitespace runs as one space, lower case. `at[i]` is where
+  // folded character i came from in the text.
+  function fold(t) {
+    let s = '';
+    const at = [];
+    for (let i = 0; i < t.length; i++) {
+      if (/\s/.test(t[i])) {
+        if (s && !s.endsWith(' ')) { s += ' '; at.push(i); }
+        continue;
+      }
+      const f = (QUOTES[t[i]] ?? t[i]).toLowerCase();
+      for (let k = 0; k < f.length; k++) { s += f[k]; at.push(i); }
+    }
+    return { s, at };
+  }
+
+  // Where `sentence` is in `text`, from offset `from` on: [start, end) or null. The sentence's edge punctuation is
+  // trimmed for the search and taken along where the text has it too, and a match must start and end at word edges.
+  // `taken` holds ranges already marked: a match overlapping one moves on to the next occurrence.
+  function locate(sentence, text, from = 0, taken = [], folded = fold(text)) {
+    const needle = fold(String(sentence ?? '')).s;
+    const core = needle.replace(/^[\s\p{P}]+|[\s\p{P}]+$/gu, '');
+    if (!core) return null;
+    const head = needle.slice(0, needle.indexOf(core)).replace(/\s/g, '');
+    const tail = needle.slice(needle.indexOf(core) + core.length).replace(/\s/g, '');
+    const { s, at } = folded;
+    const first = at.findIndex((x) => x >= from);
+    for (let i = first < 0 ? -1 : s.indexOf(core, first); i >= 0; i = s.indexOf(core, i + 1)) {
+      let a = i;
+      let b = i + core.length;
+      if ((WORD.test(core[0]) && WORD.test(s[a - 1] ?? '')) || (WORD.test(core[core.length - 1]) && WORD.test(s[b] ?? ''))) continue;
+      for (let k = head.length - 1; k >= 0 && s[a - 1] === head[k]; k--) a--;
+      for (let k = 0; k < tail.length && s[b] === tail[k]; k++) b++;
+      const start = at[a];
+      const end = at[b - 1] + 1;
+      if (start < from || taken.some(([x, y]) => start < y && x < end)) continue;
+      return [start, end];
+    }
+    return null;
+  }
+
+  // The marks for a check of `text`: { start, end, kind } per listed sentence that's in it, 'ai' for the sentences
+  // and 'hit' for the pattern hits. A repeated sentence takes its next occurrence; one that isn't found is skipped
+  // and stays in the result's list only.
+  function marksFor(o, text) {
+    const { sentences, hits } = pick(o);
+    const folded = fold(text);
+    const taken = [];
+    const next = {}; // per sentence: where its next occurrence may start
+    const out = [];
+    for (const [kind, s] of [...sentences.map((x) => ['ai', x.text]), ...hits.map((x) => ['hit', x.sentence])]) {
+      const key = fold(String(s ?? '')).s;
+      const got = locate(s, text, next[key] ?? 0, taken, folded);
+      if (!got) continue;
+      next[key] = got[1];
+      taken.push(got);
+      out.push({ start: got[0], end: got[1], kind });
+    }
+    return out.sort((x, y) => x.start - y.start);
+  }
+
+  return { pick, fold, locate, marksFor };
+})();
+</script>

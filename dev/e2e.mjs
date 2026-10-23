@@ -74,6 +74,18 @@ const siteLink = async (frame) => frame.evaluate((named) => {
     quota: document.querySelector('#quota').textContent,
   };
 }, await frame.$('aria/p3n.si[role="link"]'));
+// The test document's highlights, [kind, text] in document order, and whole blocks selected (from the start of
+// one to the end of another: highlights split a paragraph's text, so it may not start with a text node).
+const marksIn = (page) => page.$$eval('#doc .p3n-mark', (m) => m.map((x) => [x.dataset.kind, x.textContent]));
+const selectBlocks = (page, from, to = from) => page.evaluate((from, to) => {
+  const r = document.createRange();
+  const b = document.querySelector(to);
+  r.setStart(document.querySelector(from), 0);
+  r.setEnd(b, b.childNodes.length);
+  getSelection().removeAllRanges();
+  getSelection().addRange(r);
+}, from, to);
+const NOTICE = 'The highlights are in the document, so anyone who can open it sees them until you click Clear highlights.';
 // The key screen slides in with a view transition: wait until it shows and its field has focus, or typing
 // lands in the hidden field (slow CI runners hit this).
 const openKeyScreen = async (frame) => {
@@ -246,6 +258,56 @@ try {
     ok('one blue action: Sign up on the free-limit error', (await blue(frame)) === 'Sign up', await blue(frame));
     await new Promise((r) => setTimeout(r, 500));
     await shot(page, 'free-limit');
+    await page.close();
+  }
+
+  // ---- highlights in the document after a check ----
+  {
+    const { page, frame } = await open('?mock=1');
+    await selectBlocks(page, '#doc h2', '#p3');
+    await click(frame, '#check');
+    await frame.waitForFunction(settled, { timeout: 10000 });
+    await frame.waitForFunction(() => !document.querySelector('#marks').hidden, { timeout: 5000 });
+    const marks = await marksIn(page);
+    const listed = await frame.$$eval('.quotes li.hit q', (q) => q.map((x) => x.textContent));
+    const ai = marks.filter(([k]) => k === 'ai').map(([, t]) => t);
+    ok('highlights: the listed sentences marked in the document', listed.length === 3 && JSON.stringify(ai) === JSON.stringify(listed), `${ai.length} of ${listed.length}`);
+    const hit = marks.filter(([k]) => k === 'hit').map(([, t]) => t);
+    const colours = await page.$$eval('#doc .p3n-mark', (m) => [...new Set(m.map((x) => `${x.dataset.kind} ${getComputedStyle(x).backgroundColor}`))]);
+    ok('highlights: the pattern hit in a lighter colour, its curly quotes matched', JSON.stringify(hit) === JSON.stringify(['It’s not just a tool, it’s a new way to work.']) && colours.length === 2, colours.join(', '));
+    const box = await frame.$eval('#marks', (m) => ({ text: m.querySelector('p').textContent, button: m.querySelector('button').textContent, after: !!(document.querySelector('#result').compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING) }));
+    ok('highlights: the notice and Clear highlights under the result', box.text === NOTICE && box.button === 'Clear highlights' && box.after && (await blue(frame)) === 'Check for AI');
+    await shot(page, 'highlights');
+
+    // The next Check takes them off first: this paragraph has nothing to mark.
+    await selectBlocks(page, '#p2');
+    await click(frame, '#check');
+    // The last result shows until this one replaces it: wait for this one, and for the run to end.
+    await frame.waitForFunction(() => document.querySelector('.score .label')?.textContent === 'Likely human-written' && !document.querySelector('#check').disabled, { timeout: 10000 });
+    await frame.waitForFunction(() => document.querySelector('#marks').hidden, { timeout: 5000 }).catch(() => {});
+    ok('highlights: cleared on the next Check', !(await marksIn(page)).length && await frame.$eval('#marks', (m) => m.hidden));
+
+    // Left in the document when the sidebar closes: it opens again with Clear highlights.
+    await selectBlocks(page, '#p1');
+    await click(frame, '#check');
+    await frame.waitForFunction(() => !document.querySelector('#marks').hidden, { timeout: 15000 });
+    const before = await docText(page, '#p1');
+    await Promise.all([frame.waitForNavigation(), page.evaluate(() => window.reopenSidebar())]);
+    await frame.waitForFunction(() => window.P3N_BOOT && document.readyState === 'complete');
+    ok('highlights: left in the document, the reopened sidebar offers Clear highlights', await frame.$eval('#marks', (m) => !m.hidden && !document.querySelector('#result > *')));
+    await click(frame, '#unmark');
+    await frame.waitForFunction(() => document.querySelector('#marks').hidden, { timeout: 5000 }).catch(() => {});
+    ok('highlights: Clear highlights takes them off, text as it was', !(await marksIn(page)).length && (await docText(page, '#p1')) === before && await frame.$eval('#marks', (m) => m.hidden));
+
+    // Rewrite takes them off before it runs, so Replace never carries one.
+    await click(frame, '#check');
+    await frame.waitForFunction(() => !document.querySelector('#marks').hidden, { timeout: 15000 });
+    await click(frame, '#rewrite');
+    await frame.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent === 'Replace selection'), { timeout: 15000 });
+    const during = (await marksIn(page)).length;
+    await (await buttonByText(frame, 'Replace selection')).click();
+    await frame.waitForFunction(() => document.querySelector('.note.ok'), { timeout: 5000 });
+    ok('highlights: cleared on Rewrite, so Replace carries none', !during && !(await marksIn(page)).length && await frame.$eval('#marks', (m) => m.hidden));
     await page.close();
   }
 

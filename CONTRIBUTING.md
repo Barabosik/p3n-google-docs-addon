@@ -11,6 +11,7 @@ An Apps Script **Editor add-on**: `src/` is what goes to Google, plain Apps Scri
 | `src/Sidebar.html` | The sidebar's markup. Pulls in the parts below as Apps Script template includes. |
 | `src/host.html` | The Docs adapter, the only sidebar code that knows it runs in Docs: the key (user properties via `Code.js`), the free count, `grabSelection()` → `{ text, editable, blocked }`, `replace(text)` → `{ ok, reason }`, `copy`. |
 | `src/app.html` | The controller: the text box, running a check or rewrite, Replace, the key screen. Reaches the document only through the adapter, and p3n only through the API client. |
+| `src/marks.html` | Finds the sentences a check lists in the text that was checked (curly quotes as straight, whitespace runs as one space, any case), as offsets for the highlights. |
 | `src/render.html` | Results and their motion: score count-up, highlighter sweep, rewrite wipe, check marks, error copy. |
 | `src/api.html` | The API client, the [browser extension's](https://github.com/Barabosik/p3n-chrome-extension) `lib/api.js` as a plain script: `POST /v1/detect` and `/v1/humanize`, polling `/v1/runs/{id}`, readable errors. Every call names the add-on as `p3n-gdocs/<version>` (`X-P3N-Client`), from the one `VERSION` constant. |
 | `src/mock.html` | Canned API answers for mock mode and the tests. |
@@ -24,14 +25,14 @@ Apps Script pages have no modules or separately served files, so each browser pa
 
 ```bash
 npm install
-npm test            # Code.js against a stand-in for DocumentApp, and api.html's request headers, and the manifest's scopes against the listing (18 tests)
-npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (39 checks)
+npm test            # Code.js against a stand-in for DocumentApp, and api.html's request headers, the manifest's scopes against the listing, the highlight matcher, and highlighting and clearing (37 tests)
+npm run e2e         # the sidebar in headless Chrome on the local harness, mock API (46 checks)
 npm run harness     # http://127.0.0.1:8787/?mock=1, to try the sidebar by hand
 LIVE=1 npm run e2e  # adds one live Check and Rewrite: 2 of the 10 free calls an hour
 ```
 
 - `npm test` checks reading across paragraphs, soft line breaks, a word range replaced with the majority formatting, edge spaces, whole paragraphs, several paragraphs with an untouched heading, links, the refusals (edited text, tables, pictures), the find-once fallback and the key format.
-- `npm run e2e` runs the real sidebar next to a stand-in document: Check, Rewrite and Replace on one and on several paragraphs, the refusals, typed text, Copy, nothing selected, the menu's jobs, the free limit, the key screen, the footer's p3n.si link, reduced motion and page errors. Captures go to `dev/out/`. Set `CHROME=` if Chrome isn't in the default Windows location.
+- `npm run e2e` runs the real sidebar next to a stand-in document: Check, Rewrite and Replace on one and on several paragraphs, the refusals, typed text, Copy, nothing selected, the menu's jobs, the free limit, the key screen, the footer's p3n.si link, highlights in the document, reduced motion and page errors. Captures go to `dev/out/`. Set `CHROME=` if Chrome isn't in the default Windows location.
 - The harness tests the sidebar, not Docs. CI runs both suites on every push.
 
 ![The harness: the sidebar next to a stand-in document, after Replace](docs/harness-replaced.png)
@@ -72,6 +73,8 @@ After a change: `npm run push:dev`, then reopen the sidebar.
 | `documents.currentonly` | Reading the selection and replacing it, only in the document the add-on is open in. |
 | `script.container.ui` | The Extensions menu and the sidebar. |
 | `userinfo.email`, `userinfo.profile` | Nothing: the add-on never uses them. The Marketplace adds both to every listing, and Google rejects an add-on whose manifest, listing and consent screen don't list the same scopes. `npm test` checks the manifest against the listing. |
+
+**Highlights** (`highlight` and `clearHighlights` in `src/Code.js`): after Check, `marks.html` finds the listed sentences in the checked text, and Code.js gives them a background colour. DocumentApp has nothing that stays out of the document, so each coloured run gets a named range (it follows edits) and its old background (usually none), kept in the document's properties. Clearing puts that background back wherever the run still has p3n's colour; a background the user changed since stays. Docs tells the sidebar nothing about edits, so they come off on the next Check or Rewrite, or with Clear highlights.
 
 **Replace** (`replaceSelection` in `src/Code.js`):
 

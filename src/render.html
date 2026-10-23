@@ -108,13 +108,12 @@ window.P3N_RENDER = (() => {
     if (o.verdict) parts.push(h('p', {}, o.verdict));
     if (o.confidence?.level) parts.push(h('p', { class: 'small muted' }, `Confidence ${o.confidence.level}: ${o.confidence.reason ?? ''}`));
     // The panel is narrow: the sentences come first, and a pattern hit is listed only if its sentence isn't already there.
-    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
-    const shown = new Set((o.sentences ?? []).slice(0, 5).map((s) => norm(s.text)));
-    if (shown.size) {
+    // marks.html picks them, so the sentences highlighted in the document are the ones listed here.
+    const { sentences, hits } = window.P3N_MARKS.pick(o);
+    if (sentences.length) {
       parts.push(h('div', {}, h('h3', {}, 'Sentences that read as AI'),
-        h('ul', { class: 'quotes' }, o.sentences.slice(0, 5).map((s, j) => h('li', { class: 'hit', style: `--j:${j}` }, s.why ? h('span', { class: 'why' }, s.why) : null, h('q', {}, clip(s.text)))))));
+        h('ul', { class: 'quotes' }, sentences.map((s, j) => h('li', { class: 'hit', style: `--j:${j}` }, s.why ? h('span', { class: 'why' }, s.why) : null, h('q', {}, clip(s.text)))))));
     }
-    const hits = (o.examples ?? []).filter((e) => !shown.has(norm(e.sentence))).slice(0, 6);
     if (hits.length) {
       parts.push(h('div', {}, h('h3', {}, 'Pattern hits'),
         h('ul', { class: 'quotes' }, hits.map((e) => h('li', {},

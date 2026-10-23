@@ -32,15 +32,22 @@ window.P3N_MOCK = (() => {
     return --free;
   }
 
+  // A pattern the check names without listing the sentence: a pattern hit.
+  const PATTERNS = [[/\bnot just\b/i, 'Not just X, but Y']];
+
   function detect(text) {
     const ai = scoreOf(text);
-    const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => hits(s)).slice(0, 5)
+    const all = text.split(/(?<=[.!?])\s+|\n\s*\n/); // a heading or list item ends a sentence too
+    const sentences = all.filter((s) => hits(s)).slice(0, 5)
       .map((s) => ({ text: s, why: 'A stock phrase with no specific claim in it.' }));
+    // Quoted with straight apostrophes, so the tests see the highlighter match them to curly ones in the text.
+    const examples = all.map((s) => ({ sentence: s.replace(/[‘’]/g, "'"), rules: PATTERNS.filter(([re]) => re.test(s)).map(([, name]) => ({ name })) }))
+      .filter((e) => e.rules.length && !hits(e.sentence)).slice(0, 6);
     return {
       version: 'detect-v1.2 (mock)', ai, label: labelOf(ai),
       verdict: ai >= 0.7 ? 'Generic filler phrases with no specific claim or example.' : ai >= 0.4 ? 'Some stock phrasing among specific statements.' : 'Specific, plain statements.',
       confidence: { level: words(text) > 60 ? 'high' : 'medium', reason: `${words(text)} words.` },
-      sentences, examples: [],
+      sentences, examples,
     };
   }
 

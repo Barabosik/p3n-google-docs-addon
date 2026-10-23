@@ -5,6 +5,7 @@
 (() => {
   const HOST = window.P3N_HOST;
   const R = window.P3N_RENDER;
+  const MARKS = window.P3N_MARKS;
   const { ApiError, LINKS, MAX_CHARS } = window.P3N_API;
   const api = HOST.mock ? window.P3N_MOCK : window.P3N_API;
   const { h } = R;
@@ -14,10 +15,12 @@
     text: $('#text'), count: $('#count'), check: $('#check'), rewrite: $('#rewrite'), grab: $('#grab'), hint: $('#hint'),
     busy: $('#busy'), busyText: $('#busy-text'), cancel: $('#cancel'), result: $('#result'), foot: $('#foot'), quota: $('#quota'), account: $('#account'),
     main: $('#main'), settings: $('#settings'), back: $('#back'), key: $('#key'), keyStatus: $('#key-status'), remove: $('#remove'), mock: $('#mock'),
+    marks: $('#marks'), unmark: $('#unmark'),
   };
   // source: the document text in the box ({ text, editable, blocked }), so Replace can put a rewrite back.
   // fromDoc: the box still shows the document's text, so Check and Rewrite take the current selection.
-  const state = { source: null, fromDoc: false, controller: null, reading: false, timer: null };
+  // marked: a check's highlights are in the document. turn: counts runs, so only the latest one highlights.
+  const state = { source: null, fromDoc: false, controller: null, reading: false, timer: null, marked: false, marking: 0, turn: 0, docJob: Promise.resolve() };
   const key = () => HOST.getKey();
   const limit = () => (key() ? MAX_CHARS.key : MAX_CHARS.free);
 
@@ -132,7 +135,9 @@
     }
     const controller = new AbortController();
     state.controller = controller;
+    const turn = ++state.turn;
     els.result.replaceChildren();
+    unmark();
     if (!state.reading) hint('');
     setBusy(skill);
     refreshInput();
@@ -140,6 +145,8 @@
       const { run, free } = await api.runSkill(skill, text, { key: key(), options, signal: controller.signal });
       if (free != null) HOST.free.set(free);
       render(run, text, skill);
+      // Highlights only on the document's own text, as Replace, and only from the latest run.
+      if (skill === 'detect' && state.source?.text === text && turn === state.turn) mark(run.output, text);
     } catch (e) {
       if (e.name !== 'AbortError') showError(e);
       if (e.free != null) HOST.free.set(e.free);
@@ -236,6 +243,51 @@
   function showError(e) {
     els.result.replaceChildren(R.error(e, { links: LINKS, onKey: () => openSettings() }));
   }
+
+  // ---- highlights in the document ----------------------------------------------------------------
+
+  // Document calls go one after another, so a clear never lands in the middle of a highlight.
+  const inTurn = (f) => (state.docJob = state.docJob.then(f, f));
+
+  function showMarks(on) {
+    state.marked = on;
+    els.marks.hidden = !on;
+  }
+
+  // After a check of the document's text: the sentences the result lists are highlighted there too, where
+  // marks.html finds them in the text that was checked.
+  function mark(o, text) {
+    const marks = MARKS.marksFor(o, text);
+    if (!marks.length || !HOST.available) return;
+    state.marking++;
+    inTurn(async () => {
+      try {
+        if ((await HOST.mark(text, marks))?.marked) showMarks(true);
+      } catch {
+        // The result still lists them.
+      } finally {
+        state.marking--;
+      }
+    });
+  }
+
+  // Takes the highlights off: before the next Check or Rewrite, and with Clear highlights. Docs tells the sidebar
+  // nothing about edits to the document, so an edit alone doesn't; Code.js takes back what an edit took on.
+  function unmark() {
+    if (!state.marked && !state.marking) return;
+    els.unmark.disabled = true;
+    inTurn(async () => {
+      try {
+        await HOST.unmark();
+        showMarks(false);
+      } catch (e) {
+        hint(e.message);
+      } finally {
+        els.unmark.disabled = false;
+      }
+    });
+  }
+  els.unmark.addEventListener('click', unmark);
 
   // ---- account / quota ---------------------------------------------------------------------------
 
@@ -346,6 +398,7 @@
   // ---- boot --------------------------------------------------------------------------------------
 
   els.mock.hidden = !HOST.mock;
+  showMarks(HOST.marks); // left in the document from before: Clear highlights at once
   document.documentElement.dataset.view = 'main';
   refreshInput();
   refreshAccount();
