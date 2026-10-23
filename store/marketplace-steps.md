@@ -17,6 +17,7 @@ Checked against Google's docs in October 2026; the links are at the end.
 - 2026-10-21: the site moved to the user's domain, `nikita-andreiev.com`, because the branding check rejected the github.io homepage. The old github.io URLs 301-redirect there. OAuth branding (step 4) and the listing's links (step 8) take the new URLs, then re-verification.
 - 2026-10-21: **the listing was rejected**, because the app is missing OAuth verification. Google wants the scopes in Apps Script, the Marketplace SDK and the consent screen to be identical, and the listing resubmitted only after OAuth verification passes. The homepage now has no store status (22c6a1b).
 - 2026-10-22: script **version 4** (`v0.1.3`, release build of `ad3cec4`) adds the SDK's default `userinfo.email` and `userinfo.profile` to the manifest, so all three places can list the same four scopes. Versions 1–3 stay. Still to do: wait for OAuth verification without touching Data Access, since a change mid-review can restart it. After approval: add those two to Data Access, set the SDK's script version to **4**, then resubmit.
+- 2026-10-23: `0.1.4` (a p3n.si link in the sidebar's footer, scopes unchanged) is committed but not pushed or deployed. It goes up as a new script version only after OAuth approval; until then version 4 is the one under review.
 - Project numbers, IDs and the client ID stay out of this repo.
 
 ## 0. Before starting
